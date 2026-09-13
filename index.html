@@ -281,7 +281,10 @@ function showView(id) {
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
 }
 document.querySelectorAll('nav button').forEach(b => {
-  b.addEventListener('click', () => showView(b.dataset.view));
+  b.addEventListener('click', () => {
+    showView(b.dataset.view);
+    if (b.dataset.view === 'view-stok') loadStok();
+  });
 });
 
 async function checkSession() {
