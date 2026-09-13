@@ -244,8 +244,9 @@
         <input type="number" id="genHargaBeli" min="0" value="0">
         <label for="genHargaJual">Harga jual</label>
         <input type="number" id="genHargaJual" min="0" value="0">
-        <p class="error" id="genError"></p>
-        <button class="primary" id="btnSimpanProduk">Simpan barang</button>
+		<p class="error" id="genError"></p>
+		<p class="hint" id="genSuccess" style="display:none; color:var(--success);"></p>
+		<button class="primary" id="btnSimpanProduk">Simpan barang</button>
 
         <div id="barcodeWrap">
           <svg id="barcodeSvg"></svg>
@@ -394,7 +395,18 @@ document.getElementById('btnSimpanProduk').addEventListener('click', async () =>
   JsBarcode('#barcodeSvg', kode, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
   document.getElementById('barcodeLabel').textContent = nama;
   document.getElementById('barcodeWrap').style.display = 'block';
-  loadStok();
+
+  const success = document.getElementById('genSuccess');
+  success.textContent = 'Barang "' + nama + '" berhasil disimpan';
+  success.style.display = 'block';
+  setTimeout(() => { success.style.display = 'none'; }, 3000);
+
+  document.getElementById('genNama').value = '';
+  document.getElementById('genHargaBeli').value = 0;
+  document.getElementById('genHargaJual').value = 0;
+  document.getElementById('genKode').value = randomKode();
+
+loadStok();
 });
 
 document.getElementById('btnPrint').addEventListener('click', () => {
