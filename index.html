@@ -202,6 +202,12 @@
         <h2>Scan barang</h2>
         <div id="reader"></div>
         <button class="secondary" id="btnToggleScan">Mulai kamera</button>
+
+        <div style="margin-top:12px;">
+          <input type="text" id="manualKode" placeholder="Ketik kode atau nama barang">
+          <div id="manualResults"></div>
+        </div>
+
         <div class="scan-result" id="scanResult" style="display:none;">
           <p class="kode" id="scanKode"></p>
           <p class="nama" id="scanNama"></p>
@@ -222,6 +228,7 @@
           </div>
           <p class="error" id="scanError"></p>
           <button class="primary" id="btnSimpanMutasi">Simpan transaksi</button>
+          <button class="secondary" id="btnBatalScan" type="button">Batal</button>
         </div>
         <div class="scan-result" id="scanNotFound" style="display:none;">
           <p>Kode <span id="scanKodeBaru" class="kode"></span> belum terdaftar.</p>
@@ -440,6 +447,57 @@ document.getElementById('btnToggleScan').addEventListener('click', async () => {
   }
 });
 
+let manualSearchTimer = null;
+document.getElementById('manualKode').addEventListener('input', () => {
+  clearTimeout(manualSearchTimer);
+  const term = document.getElementById('manualKode').value.trim();
+  const resultsEl = document.getElementById('manualResults');
+  if (!term) {
+    resultsEl.style.display = 'none';
+    resultsEl.innerHTML = '';
+    return;
+  }
+  manualSearchTimer = setTimeout(() => searchManual(term), 300);
+});
+
+async function searchManual(term) {
+  const resultsEl = document.getElementById('manualResults');
+  const { data } = await sb
+    .from('gudang_produk')
+    .select('kode_barang, nama_barang')
+    .or(`kode_barang.ilike.%${term}%,nama_barang.ilike.%${term}%`)
+    .limit(8);
+
+  resultsEl.innerHTML = '';
+  resultsEl.style.display = 'block';
+
+  if (!data || data.length === 0) {
+    resultsEl.innerHTML = '<div class="hint" style="padding:8px 0;">Tidak ditemukan. <button class="small" id="btnDaftarBaruManual" type="button">Daftarkan sebagai barang baru</button></div>';
+    document.getElementById('btnDaftarBaruManual').addEventListener('click', () => {
+      document.getElementById('genKode').value = term;
+      document.getElementById('manualKode').value = '';
+      resultsEl.style.display = 'none';
+      showView('view-generator');
+    });
+    return;
+  }
+
+  data.forEach(p => {
+    const item = document.createElement('div');
+    item.className = 'scan-result';
+    item.style.cursor = 'pointer';
+    item.style.marginTop = '8px';
+    item.innerHTML = '<p class="kode">' + escapeHtml(p.kode_barang) + '</p><p class="nama">' + escapeHtml(p.nama_barang) + '</p>';
+    item.addEventListener('click', () => {
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
+      document.getElementById('manualKode').value = '';
+      onScanSuccess(p.kode_barang);
+    });
+    resultsEl.appendChild(item);
+  });
+}
+
 async function onScanSuccess(decodedText) {
   if (html5QrCode && scannerActive) {
     await html5QrCode.stop();
@@ -479,6 +537,13 @@ function toggleScanFields() {
 
 document.getElementById('btnKeProduk').addEventListener('click', () => {
   showView('view-generator');
+});
+
+document.getElementById('btnBatalScan').addEventListener('click', () => {
+  document.getElementById('scanResult').style.display = 'none';
+  document.getElementById('scanError').style.display = 'none';
+  scanFoundProduk = null;
+  scanFoundKode = null;
 });
 
 document.getElementById('btnSimpanMutasi').addEventListener('click', async () => {
