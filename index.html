@@ -124,6 +124,9 @@
   .scan-result { background: #fdfcf9; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; }
   .scan-result .kode { font-family: monospace; color: var(--muted); font-size: 12px; }
   .scan-result .nama { font-weight: 600; font-size: 15px; margin: 2px 0; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 10px 0 14px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .info-grid .info-label { display: block; font-size: 11px; color: var(--muted); }
+  .info-grid span:last-child { font-size: 14px; font-weight: 600; }
   .stok-list { list-style: none; margin: 0; padding: 0; }
   .stok-list li {
     display: flex;
@@ -137,6 +140,51 @@
   .stok-list .kode { font-family: monospace; font-size: 11px; color: var(--muted); }
   .stok-list .sisa { font-size: 15px; font-weight: 600; }
   .sisa.low { color: var(--danger); }
+  .stok-list li.clickable {
+    cursor: pointer;
+    margin: 0 -18px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    transition: background 0.1s;
+  }
+  .stok-list li.clickable:hover { background: var(--bg); }
+  .stok-list li.clickable:active { background: #eae7dc; }
+  .stok-right { display: flex; align-items: center; gap: 8px; }
+  .chevron { color: var(--muted); font-size: 18px; line-height: 1; }
+  .foto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 4px; }
+  .foto-slot {
+    aspect-ratio: 1 / 1;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    background: #fdfcf9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+    padding: 8px;
+  }
+  .foto-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto-slot .btn-hapus-foto {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(36,35,31,0.7);
+    color: #fff;
+    font-size: 13px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+  }
   nav {
     position: fixed;
     bottom: 0;
@@ -192,6 +240,14 @@
     <section class="view active" id="view-stok">
       <div class="card">
         <h2>Daftar barang</h2>
+        <input type="text" id="stokSearch" placeholder="Cari nama atau kode barang" style="margin-bottom:8px;">
+        <select id="stokSort" style="margin-bottom:12px;">
+          <option value="nama_asc">Nama (A-Z)</option>
+          <option value="nama_desc">Nama (Z-A)</option>
+          <option value="stok_asc">Sisa stok: sedikit dulu</option>
+          <option value="stok_desc">Sisa stok: banyak dulu</option>
+          <option value="terbaru">Terbaru ditambah</option>
+        </select>
         <ul class="stok-list" id="stokList"></ul>
         <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Tambah lewat tab "Buat kode".</p>
       </div>
@@ -211,6 +267,12 @@
         <div class="scan-result" id="scanResult" style="display:none;">
           <p class="kode" id="scanKode"></p>
           <p class="nama" id="scanNama"></p>
+          <div class="info-grid" id="scanInfo">
+            <div><span class="info-label">Harga beli</span><span id="infoHargaBeli"></span></div>
+            <div><span class="info-label">Harga jual</span><span id="infoHargaJual"></span></div>
+            <div><span class="info-label">Margin</span><span id="infoMargin"></span></div>
+            <div><span class="info-label">Sisa stok</span><span id="infoSisaStok"></span></div>
+          </div>
           <label for="scanJenis">Jenis transaksi</label>
           <select id="scanJenis">
             <option value="masuk">Stok masuk</option>
@@ -259,7 +321,27 @@
           <svg id="barcodeSvg"></svg>
           <p id="barcodeLabel" style="margin:8px 0 0; font-size:14px;"></p>
           <button class="secondary" id="btnPrint">Cetak label</button>
+          <button class="secondary" id="btnTambahFotoBaru" type="button">+ Tambah foto</button>
         </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-detail">
+      <div class="card">
+        <button class="secondary" id="btnDetailBack" type="button">&larr; Kembali ke Stok</button>
+        <h2 id="detailNama" style="margin-top:14px;"></h2>
+        <p class="kode" id="detailKode" style="font-family:monospace; color:var(--muted); font-size:12px; margin:0 0 8px;"></p>
+        <div class="info-grid">
+          <div><span class="info-label">Harga beli</span><span id="detailHargaBeli"></span></div>
+          <div><span class="info-label">Harga jual</span><span id="detailHargaJual"></span></div>
+          <div><span class="info-label">Margin</span><span id="detailMargin"></span></div>
+          <div><span class="info-label">Sisa stok</span><span id="detailSisaStok"></span></div>
+        </div>
+        <label>Foto produk (maks 4)</label>
+        <div class="foto-grid" id="fotoGrid"></div>
+        <input type="file" id="fotoInput" accept="image/*" style="display:none;">
+        <p class="error" id="fotoError"></p>
+        <p class="hint" id="fotoLoading" style="display:none;">Mengunggah foto...</p>
       </div>
     </section>
 
@@ -282,6 +364,7 @@ let scannerActive = false;
 let html5QrCode = null;
 let scanFoundProduk = null;
 let scanFoundKode = null;
+let produkBaruTerakhir = null;
 
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -332,37 +415,86 @@ document.getElementById('btnLogout').addEventListener('click', async () => {
   checkSession();
 });
 
+let stokData = [];
+
 async function loadStok() {
   const { data, error } = await sb
     .from('gudang_produk')
     .select('*')
     .order('nama_barang', { ascending: true });
+  if (error) return;
+  stokData = data || [];
+  renderStok();
+}
+
+function sortStokData(arr) {
+  const mode = document.getElementById('stokSort').value;
+  const sorted = [...arr];
+  if (mode === 'nama_desc') {
+    sorted.sort((a, b) => b.nama_barang.localeCompare(a.nama_barang));
+  } else if (mode === 'stok_asc') {
+    sorted.sort((a, b) => Number(a.sisa_stok) - Number(b.sisa_stok));
+  } else if (mode === 'stok_desc') {
+    sorted.sort((a, b) => Number(b.sisa_stok) - Number(a.sisa_stok));
+  } else if (mode === 'terbaru') {
+    sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } else {
+    sorted.sort((a, b) => a.nama_barang.localeCompare(b.nama_barang));
+  }
+  return sorted;
+}
+
+function renderStok() {
   const list = document.getElementById('stokList');
   const empty = document.getElementById('stokEmpty');
+  const term = document.getElementById('stokSearch').value.trim().toLowerCase();
+
+  const filteredRaw = term
+    ? stokData.filter(p =>
+        p.nama_barang.toLowerCase().includes(term) ||
+        p.kode_barang.toLowerCase().includes(term))
+    : stokData;
+  const filtered = sortStokData(filteredRaw);
+
   list.innerHTML = '';
-  if (error || !data || data.length === 0) {
+  if (filtered.length === 0) {
+    empty.textContent = term
+      ? 'Tidak ada barang yang cocok.'
+      : 'Belum ada barang. Tambah lewat tab "Buat kode".';
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
-  data.forEach(p => {
+  filtered.forEach(p => {
     const li = document.createElement('li');
+    li.className = 'clickable';
     const low = Number(p.sisa_stok) <= 3;
     li.innerHTML = `
       <div>
         <div class="nama">${escapeHtml(p.nama_barang)}</div>
         <div class="kode">${escapeHtml(p.kode_barang)}</div>
       </div>
-      <div class="sisa ${low ? 'low' : ''}">${p.sisa_stok}</div>
+      <div class="stok-right">
+        <div class="sisa ${low ? 'low' : ''}">${p.sisa_stok}</div>
+        <span class="chevron">&#8250;</span>
+      </div>
     `;
+    li.addEventListener('click', () => openDetail(p));
     list.appendChild(li);
   });
 }
+
+document.getElementById('stokSearch').addEventListener('input', renderStok);
+document.getElementById('stokSort').addEventListener('change', renderStok);
 
 function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+function formatRupiah(n) {
+  return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
 function randomKode() {
@@ -386,19 +518,20 @@ document.getElementById('btnSimpanProduk').addEventListener('click', async () =>
     err.style.display = 'block';
     return;
   }
-  const { error } = await sb.from('gudang_produk').insert({
+  const { data: produkBaruData, error } = await sb.from('gudang_produk').insert({
     user_id: currentUser.id,
     kode_barang: kode,
     nama_barang: nama,
     harga_beli: hb,
     harga_jual: hj,
     sisa_stok: 0
-  });
+  }).select().single();
   if (error) {
     err.textContent = error.message.includes('duplicate') ? 'Kode barang sudah dipakai, klik Acak lagi' : 'Gagal menyimpan: ' + error.message;
     err.style.display = 'block';
     return;
   }
+  produkBaruTerakhir = produkBaruData;
   JsBarcode('#barcodeSvg', kode, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
   document.getElementById('barcodeLabel').textContent = nama;
   document.getElementById('barcodeWrap').style.display = 'block';
@@ -423,6 +556,10 @@ document.getElementById('btnPrint').addEventListener('click', () => {
   w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + label + '</p></body></html>');
   w.document.close();
   w.print();
+});
+
+document.getElementById('btnTambahFotoBaru').addEventListener('click', () => {
+  if (produkBaruTerakhir) openDetail(produkBaruTerakhir);
 });
 
 document.getElementById('btnToggleScan').addEventListener('click', async () => {
@@ -518,6 +655,10 @@ async function onScanSuccess(decodedText) {
     scanFoundKode = decodedText;
     document.getElementById('scanKode').textContent = decodedText;
     document.getElementById('scanNama').textContent = data.nama_barang;
+    document.getElementById('infoHargaBeli').textContent = formatRupiah(data.harga_beli);
+    document.getElementById('infoHargaJual').textContent = formatRupiah(data.harga_jual);
+    document.getElementById('infoMargin').textContent = formatRupiah(data.margin);
+    document.getElementById('infoSisaStok').textContent = data.sisa_stok;
     document.getElementById('scanHargaBeli').value = data.harga_beli;
     toggleScanFields();
     document.getElementById('scanResult').style.display = 'block';
@@ -576,6 +717,143 @@ document.getElementById('btnSimpanMutasi').addEventListener('click', async () =>
   showView('view-stok');
   loadStok();
 });
+
+const FOTO_BUCKET = 'gudang-foto';
+let detailProduk = null;
+
+function openDetail(p) {
+  detailProduk = p;
+  document.getElementById('detailNama').textContent = p.nama_barang;
+  document.getElementById('detailKode').textContent = p.kode_barang;
+  document.getElementById('detailHargaBeli').textContent = formatRupiah(p.harga_beli);
+  document.getElementById('detailHargaJual').textContent = formatRupiah(p.harga_jual);
+  document.getElementById('detailMargin').textContent = formatRupiah(p.margin);
+  document.getElementById('detailSisaStok').textContent = p.sisa_stok;
+  document.getElementById('fotoError').style.display = 'none';
+  renderFotoGrid();
+  showView('view-detail');
+}
+
+document.getElementById('btnDetailBack').addEventListener('click', () => {
+  showView('view-stok');
+});
+
+function fotoPublicUrl(path) {
+  return sb.storage.from(FOTO_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+
+function renderFotoGrid() {
+  const grid = document.getElementById('fotoGrid');
+  grid.innerHTML = '';
+  const paths = detailProduk.foto_paths || [];
+  for (let i = 0; i < 4; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'foto-slot';
+    const path = paths[i];
+    if (path) {
+      const img = document.createElement('img');
+      img.src = fotoPublicUrl(path);
+      slot.appendChild(img);
+      const btnHapus = document.createElement('button');
+      btnHapus.type = 'button';
+      btnHapus.className = 'btn-hapus-foto';
+      btnHapus.textContent = '\u00d7';
+      btnHapus.addEventListener('click', (e) => {
+        e.stopPropagation();
+        hapusFoto(i);
+      });
+      slot.appendChild(btnHapus);
+    } else {
+      slot.textContent = '+ Tambah foto';
+      slot.addEventListener('click', () => {
+        document.getElementById('fotoInput').click();
+      });
+    }
+    grid.appendChild(slot);
+  }
+}
+
+document.getElementById('fotoInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (file) await uploadFoto(file);
+});
+
+async function uploadFoto(file) {
+  const err = document.getElementById('fotoError');
+  const loading = document.getElementById('fotoLoading');
+  err.style.display = 'none';
+  const paths = detailProduk.foto_paths || [];
+  if (paths.length >= 4) {
+    err.textContent = 'Sudah 4 foto, hapus salah satu dulu.';
+    err.style.display = 'block';
+    return;
+  }
+  const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+  const path = `${detailProduk.kode_barang}/${Date.now()}.${ext}`;
+
+  loading.style.display = 'block';
+  const { error: uploadError } = await sb.storage.from(FOTO_BUCKET).upload(path, file);
+  if (uploadError) {
+    loading.style.display = 'none';
+    err.textContent = 'Gagal unggah foto: ' + uploadError.message;
+    err.style.display = 'block';
+    return;
+  }
+
+  const newPaths = [...paths, path];
+  const { error: updateError } = await sb
+    .from('gudang_produk')
+    .update({ foto_paths: newPaths })
+    .eq('id', detailProduk.id);
+
+  loading.style.display = 'none';
+  if (updateError) {
+    err.textContent = 'Gagal simpan data foto: ' + updateError.message;
+    err.style.display = 'block';
+    return;
+  }
+
+  detailProduk.foto_paths = newPaths;
+  syncFotoPathsKeStokData(newPaths);
+  renderFotoGrid();
+}
+
+async function hapusFoto(idx) {
+  const err = document.getElementById('fotoError');
+  err.style.display = 'none';
+  const paths = detailProduk.foto_paths || [];
+  const path = paths[idx];
+  if (!path) return;
+
+  const { error: removeError } = await sb.storage.from(FOTO_BUCKET).remove([path]);
+  if (removeError) {
+    err.textContent = 'Gagal hapus foto: ' + removeError.message;
+    err.style.display = 'block';
+    return;
+  }
+
+  const newPaths = paths.filter((_, i) => i !== idx);
+  const { error: updateError } = await sb
+    .from('gudang_produk')
+    .update({ foto_paths: newPaths })
+    .eq('id', detailProduk.id);
+
+  if (updateError) {
+    err.textContent = 'Gagal simpan data foto: ' + updateError.message;
+    err.style.display = 'block';
+    return;
+  }
+
+  detailProduk.foto_paths = newPaths;
+  syncFotoPathsKeStokData(newPaths);
+  renderFotoGrid();
+}
+
+function syncFotoPathsKeStokData(newPaths) {
+  const item = stokData.find(x => x.id === detailProduk.id);
+  if (item) item.foto_paths = newPaths;
+}
 
 checkSession();
 </script>
