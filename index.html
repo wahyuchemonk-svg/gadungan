@@ -425,6 +425,12 @@
         <label>Batch aktif</label>
         <ul class="stok-list" id="detailBatchList"></ul>
         <p class="empty" id="detailBatchEmpty" style="display:none;">Belum ada batch aktif.</p>
+        <div id="detailBarcodeWrap" style="display:none; text-align:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
+          <label>Barcode batch terakhir</label>
+          <svg id="detailBarcodeSvg" style="background:#fff;"></svg>
+          <p class="hint" id="detailBarcodeInfo" style="margin:4px 0 10px;"></p>
+          <button class="secondary" id="btnPrintDetailBarcode" type="button">Cetak label</button>
+        </div>
         <label>Foto produk (maks 4)</label>
         <div class="foto-grid" id="fotoGrid"></div>
         <input type="file" id="fotoInput" accept="image/*" style="display:none;">
@@ -511,7 +517,21 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
   checkSession();
 });
 
+['loginEmail', 'loginPass'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('btnLogin').click();
+    }
+  });
+});
+
 document.getElementById('btnLogout').addEventListener('click', async () => {
+  const konfirmasi = await tampilkanKonfirmasi(
+    'Kamu akan keluar dari akun. Untuk masuk lagi, kamu perlu memasukkan email dan password.',
+    { judul: 'Keluar dari akun?', labelOk: 'Keluar' }
+  );
+  if (!konfirmasi) return;
   await sb.auth.signOut();
   checkSession();
 });
@@ -1042,6 +1062,7 @@ function openDetail(p) {
   document.getElementById('fotoError').style.display = 'none';
   renderFotoGrid();
   muatBatchDetail(p.id);
+  muatBarcodeDetail(p.id);
   showView('view-detail');
 }
 
@@ -1072,6 +1093,32 @@ async function muatBatchDetail(produkId) {
     list.appendChild(li);
   });
 }
+
+async function muatBarcodeDetail(produkId) {
+  const wrap = document.getElementById('detailBarcodeWrap');
+  wrap.style.display = 'none';
+  const { data } = await sb
+    .from('gudang_batch')
+    .select('barcode_isi, tanggal_masuk')
+    .eq('produk_id', produkId)
+    .order('tanggal_masuk', { ascending: false })
+    .limit(1);
+  if (!detailProduk || detailProduk.id !== produkId) return;
+  if (!data || data.length === 0) return;
+  const b = data[0];
+  JsBarcode('#detailBarcodeSvg', b.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
+  document.getElementById('detailBarcodeInfo').textContent = 'Batch masuk ' + tanggalIndo(b.tanggal_masuk);
+  wrap.style.display = 'block';
+}
+
+document.getElementById('btnPrintDetailBarcode').addEventListener('click', () => {
+  const svg = document.getElementById('detailBarcodeSvg').outerHTML;
+  const label = detailProduk ? detailProduk.nama_barang : '';
+  const w = window.open('', '_blank');
+  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + escapeHtml(label) + '</p></body></html>');
+  w.document.close();
+  w.print();
+});
 
 document.getElementById('btnDetailBack').addEventListener('click', () => {
   showView('view-stok');
@@ -1165,6 +1212,12 @@ async function hapusFoto(idx) {
   const path = paths[idx];
   if (!path) return;
 
+  const konfirmasi = await tampilkanKonfirmasi(
+    'Foto ini akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.',
+    { judul: 'Hapus foto?', labelOk: 'Hapus' }
+  );
+  if (!konfirmasi) return;
+
   const { error: removeError } = await sb.storage.from(FOTO_BUCKET).remove([path]);
   if (removeError) {
     err.textContent = 'Gagal hapus foto: ' + removeError.message;
@@ -1192,14 +1245,17 @@ async function hapusFoto(idx) {
 function syncFotoPathsKeStokData(newPaths) {
   const item = stokData.find(x => x.id === detailProduk.id);
   if (item) item.foto_paths = newPaths;
+  renderStok();
 }
 
-function tampilkanKonfirmasi(pesan) {
+function tampilkanKonfirmasi(pesan, { judul = 'Yakin?', labelOk = 'Hapus' } = {}) {
   return new Promise(resolve => {
+    document.getElementById('confirmTitle').textContent = judul;
     document.getElementById('confirmMessage').textContent = pesan;
     const overlay = document.getElementById('confirmOverlay');
     const okBtn = document.getElementById('confirmOkBtn');
     const cancelBtn = document.getElementById('confirmCancelBtn');
+    okBtn.textContent = labelOk;
     overlay.style.display = 'flex';
 
     function selesai(hasil) {
