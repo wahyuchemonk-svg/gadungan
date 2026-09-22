@@ -155,6 +155,61 @@
     flex: 1;
     margin-top: 0;
   }
+  .modal-card.form-modal {
+    max-width: 420px;
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .fab-wrap {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 84px;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    padding-right: 20px;
+    pointer-events: none;
+    z-index: 90;
+  }
+  .fab-wrap > * {
+    pointer-events: auto;
+  }
+  .fab-menu {
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .fab-menu.open {
+    display: flex;
+  }
+  .fab-menu button {
+    width: auto;
+    white-space: nowrap;
+    margin-top: 0;
+    background: var(--surface);
+    box-shadow: 0 4px 10px rgba(36, 35, 31, 0.2);
+  }
+  .fab-main {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(36, 35, 31, 0.3);
+    cursor: pointer;
+    margin-top: 0;
+  }
   button.danger-solid {
     padding: 11px;
     border-radius: 8px;
@@ -177,12 +232,7 @@
   .row > * { flex: 1; }
   .error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
   .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
-  #barcodeWrap { display: none; text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
-  #barcodeWrap svg { background: #fff; }
-  #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
-  .scan-result { background: #fdfcf9; border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-top: 12px; }
-  .scan-result .kode { font-family: monospace; color: var(--muted); font-size: 12px; }
-  .scan-result .nama { font-weight: 600; font-size: 15px; margin: 2px 0; }
+  #readerStok { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 10px 0 14px; padding-top: 10px; border-top: 1px solid var(--border); }
   .info-grid .info-label { display: block; font-size: 11px; color: var(--muted); }
   .info-grid span:last-child { font-size: 14px; font-weight: 600; }
@@ -311,103 +361,15 @@
         </select>
         <ul class="stok-list" id="stokList"></ul>
         <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Tambah lewat tab "Buat kode".</p>
+        <button class="secondary" id="btnDaftarBaruDariStok" type="button" style="display:none;">+ Daftarkan sebagai barang baru</button>
       </div>
-    </section>
 
-    <section class="view" id="view-scan">
-      <div class="card">
-        <h2>Scan barang</h2>
-        <div id="reader"></div>
-        <button class="secondary" id="btnToggleScan">Mulai kamera</button>
-
-        <div style="margin-top:12px;">
-          <input type="text" id="manualKode" placeholder="Ketik kode atau nama barang">
-          <div id="manualResults"></div>
+      <div class="fab-wrap">
+        <div class="fab-menu" id="fabMenu">
+          <button class="secondary" id="fabDaftarBaru" type="button">+ Daftarkan barang baru</button>
+          <button class="secondary" id="fabAktifkanKamera" type="button">&#128247; Aktifkan kamera</button>
         </div>
-
-        <div class="scan-result" id="scanResult" style="display:none;">
-          <p class="kode" id="scanKode"></p>
-          <p class="nama" id="scanNama"></p>
-          <div class="info-grid" id="scanInfo">
-            <div><span class="info-label">Harga beli</span><span id="infoHargaBeli"></span></div>
-            <div><span class="info-label">Harga jual</span><span id="infoHargaJual"></span></div>
-            <div><span class="info-label">Margin</span><span id="infoMargin"></span></div>
-            <div><span class="info-label">Sisa stok</span><span id="infoSisaStok"></span></div>
-          </div>
-          <label for="scanJenis">Jenis transaksi</label>
-          <select id="scanJenis">
-            <option value="masuk">Stok masuk</option>
-            <option value="keluar">Stok keluar</option>
-          </select>
-          <label for="scanJumlah">Jumlah</label>
-          <input type="number" id="scanJumlah" min="1" value="1">
-          <div id="scanAsalWrap">
-            <label for="scanAsal">Asal barang</label>
-            <input type="text" id="scanAsal" placeholder="Contoh: Toko Maju Jaya">
-          </div>
-          <div id="scanHargaWrap">
-            <label for="scanHargaBeli">Harga beli saat ini</label>
-            <input type="number" id="scanHargaBeli" min="0">
-          </div>
-          <div id="scanTanggalMasukWrap">
-            <label for="scanTanggalMasuk">Tanggal masuk</label>
-            <input type="date" id="scanTanggalMasuk">
-          </div>
-          <div class="info-grid" id="scanBatchMatched" style="display:none;">
-            <div><span class="info-label">Batch tanggal masuk</span><span id="batchTanggalMasuk"></span></div>
-            <div><span class="info-label">Sisa batch ini</span><span id="batchSisa"></span></div>
-          </div>
-          <div id="scanBatchFallbackWrap" style="display:none;">
-            <label for="scanBatchSelect">Pilih batch (default: paling lama)</label>
-            <select id="scanBatchSelect"></select>
-          </div>
-          <p class="error" id="scanError"></p>
-          <button class="primary" id="btnSimpanMutasi">Simpan transaksi</button>
-          <button class="secondary" id="btnBatalScan" type="button">Batal</button>
-        </div>
-        <div class="scan-result" id="scanBatchBarcodeWrap" style="display:none; text-align:center;">
-          <p>Transaksi tersimpan. Cetak label batch ini:</p>
-          <svg id="scanBatchBarcodeSvg"></svg>
-          <p id="scanBatchBarcodeLabel" style="margin:8px 0 0; font-size:14px;"></p>
-          <button class="secondary" id="btnPrintBatchBarcode" type="button">Cetak label</button>
-        </div>
-        <div class="scan-result" id="scanNotFound" style="display:none;">
-          <p>Kode <span id="scanKodeBaru" class="kode"></span> belum terdaftar.</p>
-          <button class="secondary" id="btnKeProduk">Daftarkan sebagai barang baru</button>
-        </div>
-      </div>
-    </section>
-
-    <section class="view" id="view-generator">
-      <div class="card">
-        <h2>Barang baru + kode</h2>
-        <label for="genNama">Nama barang</label>
-        <input type="text" id="genNama" placeholder="Contoh: Baterai ABC AAA isi 3">
-        <label for="genKode">Kode barang</label>
-        <div class="row">
-          <input type="text" id="genKode" readonly>
-          <button class="small" id="btnGenKode" type="button">Acak</button>
-        </div>
-        <label for="genHargaBeli">Harga beli</label>
-        <input type="number" id="genHargaBeli" min="0" value="0">
-        <label for="genHargaJual">Harga jual</label>
-        <input type="number" id="genHargaJual" min="0" value="0">
-        <label for="genJumlahAwal">Jumlah stok masuk</label>
-        <input type="number" id="genJumlahAwal" min="1" value="1">
-        <label for="genTanggalMasuk">Tanggal masuk</label>
-        <input type="date" id="genTanggalMasuk">
-        <label for="genAsal">Asal barang (opsional)</label>
-        <input type="text" id="genAsal" placeholder="Contoh: Toko Maju Jaya">
-		<p class="error" id="genError"></p>
-		<p class="hint" id="genSuccess" style="display:none; color:var(--success);"></p>
-		<button class="primary" id="btnSimpanProduk">Simpan barang</button>
-
-        <div id="barcodeWrap">
-          <svg id="barcodeSvg"></svg>
-          <p id="barcodeLabel" style="margin:8px 0 0; font-size:14px;"></p>
-          <button class="secondary" id="btnPrint">Cetak label</button>
-          <button class="secondary" id="btnTambahFotoBaru" type="button">+ Tambah foto</button>
-        </div>
+        <button class="fab-main" id="fabMain" type="button" aria-label="Menu">+</button>
       </div>
     </section>
 
@@ -425,6 +387,38 @@
         <label>Batch aktif</label>
         <ul class="stok-list" id="detailBatchList"></ul>
         <p class="empty" id="detailBatchEmpty" style="display:none;">Belum ada batch aktif.</p>
+        <button class="secondary" id="btnCatatTransaksi" type="button">+ Catat transaksi</button>
+        <div id="detailTransaksiForm" style="display:none;">
+          <label for="detailTransJenis">Jenis transaksi</label>
+          <select id="detailTransJenis">
+            <option value="masuk">Stok masuk</option>
+            <option value="keluar">Stok keluar</option>
+          </select>
+          <label for="detailTransJumlah">Jumlah</label>
+          <input type="number" id="detailTransJumlah" min="1" value="1">
+          <div id="detailTransMasukWrap">
+            <label for="detailTransAsal">Asal barang (opsional)</label>
+            <input type="text" id="detailTransAsal" placeholder="Contoh: Toko Maju Jaya">
+            <label for="detailTransHargaBeli">Harga beli saat ini</label>
+            <input type="number" id="detailTransHargaBeli" min="0">
+            <label for="detailTransTanggalMasuk">Tanggal masuk</label>
+            <input type="date" id="detailTransTanggalMasuk">
+          </div>
+          <div id="detailTransKeluarWrap" style="display:none;">
+            <div class="info-grid" id="detailTransBatchMatched" style="display:none;">
+              <div><span class="info-label">Tanggal masuk</span><span id="detailTransBatchMatchedTanggal"></span></div>
+              <div><span class="info-label">Sisa</span><span id="detailTransBatchMatchedSisa"></span></div>
+            </div>
+            <div id="detailTransBatchFallbackWrap">
+              <label for="detailTransBatchSelect">Pilih batch (default: paling lama)</label>
+              <select id="detailTransBatchSelect"></select>
+            </div>
+          </div>
+          <p class="error" id="detailTransError" style="display:none;"></p>
+          <p class="hint" id="detailTransSuccess" style="display:none; color:var(--success);">Transaksi tersimpan</p>
+          <button class="primary" id="btnSimpanTransaksiDetail" type="button">Simpan transaksi</button>
+          <button class="secondary" id="btnBatalTransaksiDetail" type="button">Batal</button>
+        </div>
         <div id="detailBarcodeWrap" style="display:none; text-align:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
           <label>Barcode batch terakhir</label>
           <svg id="detailBarcodeSvg" style="background:#fff;"></svg>
@@ -445,8 +439,6 @@
 
   <nav>
     <button data-view="view-stok" class="active"><span class="icon">&#128230;</span>Stok</button>
-    <button data-view="view-scan"><span class="icon">&#128247;</span>Scan</button>
-    <button data-view="view-generator"><span class="icon">&#127991;</span>Buat kode</button>
   </nav>
 </div>
 
@@ -461,16 +453,51 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalBaruOverlay">
+  <div class="modal-card form-modal">
+    <h3>Daftarkan barang baru</h3>
+    <label for="modalBaruNama">Nama barang</label>
+    <input type="text" id="modalBaruNama" placeholder="Contoh: Baterai ABC AAA isi 3">
+    <label for="modalBaruKode">Kode barang</label>
+    <div class="row">
+      <input type="text" id="modalBaruKode" readonly>
+      <button class="small" id="btnModalBaruGenKode" type="button">Acak</button>
+    </div>
+    <label for="modalBaruHargaBeli">Harga beli</label>
+    <input type="number" id="modalBaruHargaBeli" min="0" value="0">
+    <label for="modalBaruHargaJual">Harga jual</label>
+    <input type="number" id="modalBaruHargaJual" min="0" value="0">
+    <label for="modalBaruJumlahAwal">Jumlah stok masuk</label>
+    <input type="number" id="modalBaruJumlahAwal" min="1" value="1">
+    <label for="modalBaruTanggalMasuk">Tanggal masuk</label>
+    <input type="date" id="modalBaruTanggalMasuk">
+    <label for="modalBaruAsal">Asal barang (opsional)</label>
+    <input type="text" id="modalBaruAsal" placeholder="Contoh: Toko Maju Jaya">
+    <p class="error" id="modalBaruError" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="secondary" id="btnModalBaruBatal" type="button">Batal</button>
+      <button class="primary" id="btnModalBaruSimpan" type="button">Simpan barang</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalKameraOverlay">
+  <div class="modal-card">
+    <h3>Pindai barang</h3>
+    <div id="readerStok"></div>
+    <button class="secondary" id="btnToggleKameraStok" type="button">Mulai kamera</button>
+    <div class="modal-actions">
+      <button class="secondary" id="btnTutupModalKamera" type="button">Tutup</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SUPABASE_URL = "https://nsbvzqmezvhqgoaaxddr.supabase.co";
 const SUPABASE_KEY = "sb_publishable__Do3g-HIiJKsFVajpeGTaw_DWg50Jvx";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentUser = null;
-let scannerActive = false;
-let html5QrCode = null;
-let scanFoundProduk = null;
-let scanFoundKode = null;
 let produkBaruTerakhir = null;
 
 function showView(id) {
@@ -577,15 +604,18 @@ function renderStok() {
     : stokData;
   const filtered = sortStokData(filteredRaw);
 
+  const btnDaftarBaru = document.getElementById('btnDaftarBaruDariStok');
   list.innerHTML = '';
   if (filtered.length === 0) {
     empty.textContent = term
       ? 'Tidak ada barang yang cocok.'
       : 'Belum ada barang. Tambah lewat tab "Buat kode".';
     empty.style.display = 'block';
+    btnDaftarBaru.style.display = term ? 'block' : 'none';
     return;
   }
   empty.style.display = 'none';
+  btnDaftarBaru.style.display = 'none';
   filtered.forEach(p => {
     const li = document.createElement('li');
     li.className = 'clickable';
@@ -612,60 +642,125 @@ function renderStok() {
 document.getElementById('stokSearch').addEventListener('input', renderStok);
 document.getElementById('stokSort').addEventListener('change', renderStok);
 
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
+function bukaModalBarangBaru(namaAwal) {
+  document.getElementById('modalBaruNama').value = namaAwal || '';
+  document.getElementById('modalBaruKode').value = randomKode();
+  document.getElementById('modalBaruHargaBeli').value = 0;
+  document.getElementById('modalBaruHargaJual').value = 0;
+  document.getElementById('modalBaruJumlahAwal').value = 1;
+  document.getElementById('modalBaruTanggalMasuk').value = todayISO();
+  document.getElementById('modalBaruAsal').value = '';
+  document.getElementById('modalBaruError').style.display = 'none';
+  document.getElementById('modalBaruOverlay').style.display = 'flex';
 }
 
-function formatRupiah(n) {
-  return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
-}
-
-function formatDDMMYYYY(d) {
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return dd + mm + d.getFullYear();
-}
-function todayISO() {
-  const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-}
-function tanggalIndo(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  return `${d}-${m}-${y}`;
-}
-function isoToDDMMYYYY(iso) {
-  const [y, m, d] = iso.split('-');
-  return d + m + y;
-}
-function parseBarcodeBatch(text) {
-  const m = text.match(/^(.+)-(\d{2})(\d{2})(\d{4})$/);
-  if (!m) return null;
-  const [, kode, dd, mm, yyyy] = m;
-  return { kode, tanggalISO: `${yyyy}-${mm}-${dd}` };
-}
-
-function randomKode() {
-  const n = Math.floor(1000 + Math.random() * 9000);
-  return 'WRG-' + n;
-}
-document.getElementById('genKode').value = randomKode();
-document.getElementById('genTanggalMasuk').value = todayISO();
-document.getElementById('btnGenKode').addEventListener('click', () => {
-  document.getElementById('genKode').value = randomKode();
+document.getElementById('btnDaftarBaruDariStok').addEventListener('click', () => {
+  bukaModalBarangBaru(document.getElementById('stokSearch').value.trim());
 });
 
-document.getElementById('btnSimpanProduk').addEventListener('click', async () => {
-  const nama = document.getElementById('genNama').value.trim();
-  const kode = document.getElementById('genKode').value.trim();
-  const hb = Number(document.getElementById('genHargaBeli').value) || 0;
-  const hj = Number(document.getElementById('genHargaJual').value) || 0;
-  const jumlahAwal = Number(document.getElementById('genJumlahAwal').value);
-  const tanggalMasuk = document.getElementById('genTanggalMasuk').value;
-  const asal = document.getElementById('genAsal').value.trim() || null;
-  const err = document.getElementById('genError');
+document.getElementById('fabMain').addEventListener('click', () => {
+  document.getElementById('fabMenu').classList.toggle('open');
+});
+
+document.getElementById('fabDaftarBaru').addEventListener('click', () => {
+  document.getElementById('fabMenu').classList.remove('open');
+  bukaModalBarangBaru('');
+});
+
+let scannerActiveStok = false;
+let html5QrCodeStok = null;
+
+document.getElementById('fabAktifkanKamera').addEventListener('click', () => {
+  document.getElementById('fabMenu').classList.remove('open');
+  document.getElementById('modalKameraOverlay').style.display = 'flex';
+});
+
+document.getElementById('btnToggleKameraStok').addEventListener('click', async () => {
+  if (!scannerActiveStok) {
+    html5QrCodeStok = new Html5Qrcode('readerStok');
+    try {
+      await html5QrCodeStok.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 220, height: 120 } },
+        onScanSuccessStok
+      );
+      scannerActiveStok = true;
+      document.getElementById('btnToggleKameraStok').textContent = 'Hentikan kamera';
+    } catch (e) {
+      alert('Tidak bisa akses kamera. Pastikan izin kamera diaktifkan.');
+    }
+  } else {
+    await html5QrCodeStok.stop();
+    scannerActiveStok = false;
+    document.getElementById('btnToggleKameraStok').textContent = 'Mulai kamera';
+  }
+});
+
+async function onScanSuccessStok(decodedText) {
+  if (html5QrCodeStok && scannerActiveStok) {
+    await html5QrCodeStok.stop();
+    scannerActiveStok = false;
+    document.getElementById('btnToggleKameraStok').textContent = 'Mulai kamera';
+  }
+
+  const parsed = parseBarcodeBatch(decodedText);
+  const kodeBarang = parsed ? parsed.kode : decodedText;
+
+  const { data } = await sb
+    .from('gudang_produk')
+    .select('*')
+    .eq('kode_barang', kodeBarang)
+    .maybeSingle();
+
+  document.getElementById('modalKameraOverlay').style.display = 'none';
+
+  if (!data) {
+    document.getElementById('stokSearch').value = kodeBarang;
+    renderStok();
+    return;
+  }
+
+  let matchedBatch = null;
+  if (parsed) {
+    const { data: batch } = await sb
+      .from('gudang_batch')
+      .select('*')
+      .eq('produk_id', data.id)
+      .eq('tanggal_masuk', parsed.tanggalISO)
+      .maybeSingle();
+    matchedBatch = batch || null;
+  }
+
+  openDetail(data);
+  bukaFormTransaksi(matchedBatch);
+}
+
+document.getElementById('btnTutupModalKamera').addEventListener('click', async () => {
+  if (html5QrCodeStok && scannerActiveStok) {
+    await html5QrCodeStok.stop();
+    scannerActiveStok = false;
+    document.getElementById('btnToggleKameraStok').textContent = 'Mulai kamera';
+  }
+  document.getElementById('modalKameraOverlay').style.display = 'none';
+});
+
+document.getElementById('btnModalBaruBatal').addEventListener('click', () => {
+  document.getElementById('modalBaruOverlay').style.display = 'none';
+});
+
+document.getElementById('btnModalBaruGenKode').addEventListener('click', () => {
+  document.getElementById('modalBaruKode').value = randomKode();
+});
+
+document.getElementById('btnModalBaruSimpan').addEventListener('click', async () => {
+  const nama = document.getElementById('modalBaruNama').value.trim();
+  const kode = document.getElementById('modalBaruKode').value.trim();
+  const hb = Number(document.getElementById('modalBaruHargaBeli').value) || 0;
+  const hj = Number(document.getElementById('modalBaruHargaJual').value) || 0;
+  const jumlahAwal = Number(document.getElementById('modalBaruJumlahAwal').value);
+  const tanggalMasuk = document.getElementById('modalBaruTanggalMasuk').value;
+  const asal = document.getElementById('modalBaruAsal').value.trim() || null;
+  const err = document.getElementById('modalBaruError');
   err.style.display = 'none';
   if (!nama) {
     err.textContent = 'Isi nama barang dulu';
@@ -723,219 +818,52 @@ document.getElementById('btnSimpanProduk').addEventListener('click', async () =>
 
   produkBaruTerakhir = produkBaruData;
   produkBaruTerakhir.sisa_stok = jumlahAwal;
-  JsBarcode('#barcodeSvg', batch.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
-  document.getElementById('barcodeLabel').textContent = nama;
-  document.getElementById('barcodeWrap').style.display = 'block';
 
-  const success = document.getElementById('genSuccess');
-  success.textContent = 'Barang "' + nama + '" berhasil disimpan';
-  success.style.display = 'block';
-  setTimeout(() => { success.style.display = 'none'; }, 3000);
-
-  document.getElementById('genNama').value = '';
-  document.getElementById('genHargaBeli').value = 0;
-  document.getElementById('genHargaJual').value = 0;
-  document.getElementById('genJumlahAwal').value = 1;
-  document.getElementById('genTanggalMasuk').value = todayISO();
-  document.getElementById('genAsal').value = '';
-  document.getElementById('genKode').value = randomKode();
-
-loadStok();
+  document.getElementById('modalBaruOverlay').style.display = 'none';
+  document.getElementById('stokSearch').value = '';
+  loadStok();
+  openDetail(produkBaruTerakhir);
 });
 
-document.getElementById('btnPrint').addEventListener('click', () => {
-  const svg = document.getElementById('barcodeSvg').outerHTML;
-  const label = document.getElementById('barcodeLabel').textContent;
-  const w = window.open('', '_blank');
-  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + label + '</p></body></html>');
-  w.document.close();
-  w.print();
-});
-
-document.getElementById('btnTambahFotoBaru').addEventListener('click', () => {
-  if (produkBaruTerakhir) openDetail(produkBaruTerakhir);
-});
-
-document.getElementById('btnToggleScan').addEventListener('click', async () => {
-  if (!scannerActive) {
-    html5QrCode = new Html5Qrcode('reader');
-    try {
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 120 } },
-        onScanSuccess
-      );
-      scannerActive = true;
-      document.getElementById('btnToggleScan').textContent = 'Hentikan kamera';
-    } catch (e) {
-      document.getElementById('scanResult').style.display = 'none';
-      alert('Tidak bisa akses kamera. Pastikan izin kamera diaktifkan.');
-    }
-  } else {
-    await html5QrCode.stop();
-    scannerActive = false;
-    document.getElementById('btnToggleScan').textContent = 'Mulai kamera';
-  }
-});
-
-let manualSearchTimer = null;
-document.getElementById('manualKode').addEventListener('input', () => {
-  clearTimeout(manualSearchTimer);
-  const term = document.getElementById('manualKode').value.trim();
-  const resultsEl = document.getElementById('manualResults');
-  if (!term) {
-    resultsEl.style.display = 'none';
-    resultsEl.innerHTML = '';
-    return;
-  }
-  manualSearchTimer = setTimeout(() => searchManual(term), 300);
-});
-
-async function searchManual(term) {
-  const resultsEl = document.getElementById('manualResults');
-  const { data } = await sb
-    .from('gudang_produk')
-    .select('kode_barang, nama_barang')
-    .or(`kode_barang.ilike.%${term}%,nama_barang.ilike.%${term}%`)
-    .limit(8);
-
-  resultsEl.innerHTML = '';
-  resultsEl.style.display = 'block';
-
-  if (!data || data.length === 0) {
-    resultsEl.innerHTML = '<div class="hint" style="padding:8px 0;">Tidak ditemukan. <button class="small" id="btnDaftarBaruManual" type="button">Daftarkan sebagai barang baru</button></div>';
-    document.getElementById('btnDaftarBaruManual').addEventListener('click', () => {
-      document.getElementById('genKode').value = term;
-      document.getElementById('manualKode').value = '';
-      resultsEl.style.display = 'none';
-      showView('view-generator');
-    });
-    return;
-  }
-
-  data.forEach(p => {
-    const item = document.createElement('div');
-    item.className = 'scan-result';
-    item.style.cursor = 'pointer';
-    item.style.marginTop = '8px';
-    item.innerHTML = '<p class="kode">' + escapeHtml(p.kode_barang) + '</p><p class="nama">' + escapeHtml(p.nama_barang) + '</p>';
-    item.addEventListener('click', () => {
-      resultsEl.style.display = 'none';
-      resultsEl.innerHTML = '';
-      document.getElementById('manualKode').value = '';
-      onScanSuccess(p.kode_barang);
-    });
-    resultsEl.appendChild(item);
-  });
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
-let scanFoundBatch = null;
-
-async function onScanSuccess(decodedText) {
-  if (html5QrCode && scannerActive) {
-    await html5QrCode.stop();
-    scannerActive = false;
-    document.getElementById('btnToggleScan').textContent = 'Mulai kamera';
-  }
-
-  const parsed = parseBarcodeBatch(decodedText);
-  const kodeBarang = parsed ? parsed.kode : decodedText;
-
-  const { data } = await sb
-    .from('gudang_produk')
-    .select('*')
-    .eq('kode_barang', kodeBarang)
-    .maybeSingle();
-
-  document.getElementById('scanResult').style.display = 'none';
-  document.getElementById('scanNotFound').style.display = 'none';
-  document.getElementById('scanBatchBarcodeWrap').style.display = 'none';
-
-  if (data) {
-    scanFoundProduk = data;
-    scanFoundKode = kodeBarang;
-    scanFoundBatch = null;
-    document.getElementById('scanKode').textContent = kodeBarang;
-    document.getElementById('scanNama').textContent = data.nama_barang;
-    document.getElementById('infoHargaBeli').textContent = formatRupiah(data.harga_beli);
-    document.getElementById('infoHargaJual').textContent = formatRupiah(data.harga_jual);
-    document.getElementById('infoMargin').textContent = formatRupiah(data.margin);
-    document.getElementById('infoSisaStok').textContent = data.sisa_stok;
-    document.getElementById('scanHargaBeli').value = data.harga_beli;
-
-    if (parsed) {
-      const { data: batch } = await sb
-        .from('gudang_batch')
-        .select('*')
-        .eq('produk_id', data.id)
-        .eq('tanggal_masuk', parsed.tanggalISO)
-        .maybeSingle();
-      scanFoundBatch = batch || null;
-    }
-
-    await toggleScanFields();
-    document.getElementById('scanResult').style.display = 'block';
-  } else {
-    document.getElementById('scanKodeBaru').textContent = kodeBarang;
-    document.getElementById('scanNotFound').style.display = 'block';
-    document.getElementById('genKode').value = kodeBarang;
-  }
+function formatRupiah(n) {
+  return 'Rp ' + Number(n || 0).toLocaleString('id-ID');
 }
 
-document.getElementById('scanJenis').addEventListener('change', toggleScanFields);
-async function toggleScanFields() {
-  const jenis = document.getElementById('scanJenis').value;
-  const isMasuk = jenis === 'masuk';
-  document.getElementById('scanAsalWrap').style.display = isMasuk ? 'block' : 'none';
-  document.getElementById('scanHargaWrap').style.display = isMasuk ? 'block' : 'none';
-  document.getElementById('scanTanggalMasukWrap').style.display = isMasuk ? 'block' : 'none';
-  if (isMasuk && !document.getElementById('scanTanggalMasuk').value) {
-    document.getElementById('scanTanggalMasuk').value = todayISO();
-  }
-
-  document.getElementById('scanBatchMatched').style.display = 'none';
-  document.getElementById('scanBatchFallbackWrap').style.display = 'none';
-
-  if (!isMasuk && scanFoundProduk) {
-    if (scanFoundBatch) {
-      document.getElementById('batchTanggalMasuk').textContent = tanggalIndo(scanFoundBatch.tanggal_masuk);
-      document.getElementById('batchSisa').textContent = scanFoundBatch.sisa;
-      document.getElementById('scanBatchMatched').style.display = 'grid';
-    } else {
-      await muatPilihanBatch(scanFoundProduk.id);
-      document.getElementById('scanBatchFallbackWrap').style.display = 'block';
-    }
-  }
+function formatDDMMYYYY(d) {
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return dd + mm + d.getFullYear();
+}
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function tanggalIndo(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}-${m}-${y}`;
+}
+function isoToDDMMYYYY(iso) {
+  const [y, m, d] = iso.split('-');
+  return d + m + y;
+}
+function parseBarcodeBatch(text) {
+  const m = text.match(/^(.+)-(\d{2})(\d{2})(\d{4})$/);
+  if (!m) return null;
+  const [, kode, dd, mm, yyyy] = m;
+  return { kode, tanggalISO: `${yyyy}-${mm}-${dd}` };
 }
 
-async function muatPilihanBatch(produkId) {
-  const sel = document.getElementById('scanBatchSelect');
-  sel.innerHTML = '';
-  const { data } = await sb
-    .from('gudang_batch')
-    .select('*')
-    .eq('produk_id', produkId)
-    .gt('sisa', 0)
-    .order('tanggal_masuk', { ascending: true });
-  (data || []).forEach(b => {
-    const opt = document.createElement('option');
-    opt.value = b.id;
-    opt.textContent = `${tanggalIndo(b.tanggal_masuk)} — sisa ${b.sisa}`;
-    sel.appendChild(opt);
-  });
+function randomKode() {
+  const n = Math.floor(1000 + Math.random() * 9000);
+  return 'WRG-' + n;
 }
-
-document.getElementById('btnKeProduk').addEventListener('click', () => {
-  showView('view-generator');
-});
-
-document.getElementById('btnBatalScan').addEventListener('click', () => {
-  document.getElementById('scanResult').style.display = 'none';
-  document.getElementById('scanError').style.display = 'none';
-  scanFoundProduk = null;
-  scanFoundKode = null;
-  scanFoundBatch = null;
-});
 
 async function getOrBuatBatch(produkId, tanggalMasukISO, hargaBeli, kodeBarang) {
   const { data: existing } = await sb
@@ -960,94 +888,6 @@ async function getOrBuatBatch(produkId, tanggalMasukISO, hargaBeli, kodeBarang) 
   return baru;
 }
 
-document.getElementById('btnSimpanMutasi').addEventListener('click', async () => {
-  const jenis = document.getElementById('scanJenis').value;
-  const jumlah = Number(document.getElementById('scanJumlah').value);
-  const err = document.getElementById('scanError');
-  err.style.display = 'none';
-  if (!jumlah || jumlah <= 0) {
-    err.textContent = 'Isi jumlah yang benar';
-    err.style.display = 'block';
-    return;
-  }
-
-  const payload = {
-    user_id: currentUser.id,
-    produk_id: scanFoundProduk.id,
-    jenis: jenis,
-    jumlah: jumlah
-  };
-
-  let batchUntukBarcode = null;
-
-  if (jenis === 'masuk') {
-    const tanggalMasuk = document.getElementById('scanTanggalMasuk').value;
-    if (!tanggalMasuk) {
-      err.textContent = 'Isi tanggal masuk';
-      err.style.display = 'block';
-      return;
-    }
-    const hargaBeli = Number(document.getElementById('scanHargaBeli').value) || null;
-    payload.asal_barang = document.getElementById('scanAsal').value.trim() || null;
-    payload.harga_beli_saat_itu = hargaBeli;
-
-    let batch;
-    try {
-      batch = await getOrBuatBatch(scanFoundProduk.id, tanggalMasuk, hargaBeli, scanFoundProduk.kode_barang);
-    } catch (e) {
-      err.textContent = 'Gagal menyiapkan batch: ' + e.message;
-      err.style.display = 'block';
-      return;
-    }
-    payload.batch_id = batch.id;
-    batchUntukBarcode = batch;
-
-  } else {
-    const batchId = scanFoundBatch ? scanFoundBatch.id : document.getElementById('scanBatchSelect').value;
-    if (!batchId) {
-      err.textContent = 'Belum ada batch aktif untuk barang ini';
-      err.style.display = 'block';
-      return;
-    }
-    payload.batch_id = batchId;
-  }
-
-  const { error } = await sb.from('gudang_mutasi_stok').insert(payload);
-  if (error) {
-    if (error.message.includes('Stok batch tidak cukup')) {
-      err.textContent = 'Stok batch ini tidak cukup. Pilih batch lain untuk sisanya.';
-      await muatPilihanBatch(scanFoundProduk.id);
-      document.getElementById('scanBatchMatched').style.display = 'none';
-      document.getElementById('scanBatchFallbackWrap').style.display = 'block';
-      scanFoundBatch = null;
-    } else {
-      err.textContent = 'Gagal menyimpan: ' + error.message;
-    }
-    err.style.display = 'block';
-    return;
-  }
-
-  document.getElementById('scanResult').style.display = 'none';
-
-  if (jenis === 'masuk' && batchUntukBarcode) {
-    JsBarcode('#scanBatchBarcodeSvg', batchUntukBarcode.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
-    document.getElementById('scanBatchBarcodeLabel').textContent = scanFoundProduk.nama_barang;
-    document.getElementById('scanBatchBarcodeWrap').style.display = 'block';
-  } else {
-    showView('view-stok');
-  }
-  loadStok();
-});
-
-document.getElementById('btnPrintBatchBarcode').addEventListener('click', () => {
-  const svg = document.getElementById('scanBatchBarcodeSvg').outerHTML;
-  const label = document.getElementById('scanBatchBarcodeLabel').textContent;
-  const w = window.open('', '_blank');
-  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + label + '</p></body></html>');
-  w.document.close();
-  w.print();
-});
-
 const FOTO_BUCKET = 'gudang-foto';
 let detailProduk = null;
 
@@ -1059,7 +899,7 @@ function openDetail(p) {
   document.getElementById('detailHargaJual').textContent = formatRupiah(p.harga_jual);
   document.getElementById('detailMargin').textContent = formatRupiah(p.margin);
   document.getElementById('detailSisaStok').textContent = p.sisa_stok;
-  document.getElementById('fotoError').style.display = 'none';
+  document.getElementById('detailTransaksiForm').style.display = 'none';
   renderFotoGrid();
   muatBatchDetail(p.id);
   muatBarcodeDetail(p.id);
@@ -1076,19 +916,24 @@ async function muatBatchDetail(produkId) {
     .eq('produk_id', produkId)
     .gt('sisa', 0)
     .order('tanggal_masuk', { ascending: true });
+
+  if (!detailProduk || detailProduk.id !== produkId) return;
+
   if (!data || data.length === 0) {
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
+
   data.forEach(b => {
     const li = document.createElement('li');
     li.innerHTML = `
       <div>
-        <div class="nama">Tanggal masuk</div>
-        <div class="kode">${tanggalIndo(b.tanggal_masuk)}</div>
+        <div class="nama">Masuk ${tanggalIndo(b.tanggal_masuk)}</div>
       </div>
-      <div class="sisa">${b.sisa}</div>
+      <div class="stok-right">
+        <div class="sisa">${b.sisa}</div>
+      </div>
     `;
     list.appendChild(li);
   });
@@ -1097,25 +942,28 @@ async function muatBatchDetail(produkId) {
 async function muatBarcodeDetail(produkId) {
   const wrap = document.getElementById('detailBarcodeWrap');
   wrap.style.display = 'none';
+
   const { data } = await sb
     .from('gudang_batch')
-    .select('barcode_isi, tanggal_masuk')
+    .select('*')
     .eq('produk_id', produkId)
     .order('tanggal_masuk', { ascending: false })
-    .limit(1);
+    .limit(1)
+    .maybeSingle();
+
   if (!detailProduk || detailProduk.id !== produkId) return;
-  if (!data || data.length === 0) return;
-  const b = data[0];
-  JsBarcode('#detailBarcodeSvg', b.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
-  document.getElementById('detailBarcodeInfo').textContent = 'Batch masuk ' + tanggalIndo(b.tanggal_masuk);
+  if (!data) return;
+
+  JsBarcode('#detailBarcodeSvg', data.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
+  document.getElementById('detailBarcodeInfo').textContent = 'Tanggal masuk: ' + tanggalIndo(data.tanggal_masuk);
   wrap.style.display = 'block';
 }
 
 document.getElementById('btnPrintDetailBarcode').addEventListener('click', () => {
   const svg = document.getElementById('detailBarcodeSvg').outerHTML;
-  const label = detailProduk ? detailProduk.nama_barang : '';
+  const label = document.getElementById('detailBarcodeInfo').textContent;
   const w = window.open('', '_blank');
-  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + escapeHtml(label) + '</p></body></html>');
+  w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + label + '</p></body></html>');
   w.document.close();
   w.print();
 });
@@ -1123,6 +971,155 @@ document.getElementById('btnPrintDetailBarcode').addEventListener('click', () =>
 document.getElementById('btnDetailBack').addEventListener('click', () => {
   showView('view-stok');
 });
+
+let detailTransMatchedBatch = null;
+
+document.getElementById('btnCatatTransaksi').addEventListener('click', () => {
+  bukaFormTransaksi(null);
+});
+
+function bukaFormTransaksi(matchedBatch) {
+  detailTransMatchedBatch = matchedBatch || null;
+  document.getElementById('detailTransJenis').value = 'masuk';
+  document.getElementById('detailTransJumlah').value = 1;
+  document.getElementById('detailTransAsal').value = '';
+  document.getElementById('detailTransHargaBeli').value = detailProduk.harga_beli;
+  document.getElementById('detailTransTanggalMasuk').value = todayISO();
+  document.getElementById('detailTransError').style.display = 'none';
+  document.getElementById('detailTransSuccess').style.display = 'none';
+  toggleDetailTransFields();
+  document.getElementById('detailTransaksiForm').style.display = 'block';
+}
+
+document.getElementById('btnBatalTransaksiDetail').addEventListener('click', () => {
+  document.getElementById('detailTransaksiForm').style.display = 'none';
+  detailTransMatchedBatch = null;
+});
+
+document.getElementById('detailTransJenis').addEventListener('change', toggleDetailTransFields);
+async function toggleDetailTransFields() {
+  const isMasuk = document.getElementById('detailTransJenis').value === 'masuk';
+  document.getElementById('detailTransMasukWrap').style.display = isMasuk ? 'block' : 'none';
+  document.getElementById('detailTransKeluarWrap').style.display = isMasuk ? 'none' : 'block';
+  if (isMasuk && !document.getElementById('detailTransTanggalMasuk').value) {
+    document.getElementById('detailTransTanggalMasuk').value = todayISO();
+  }
+  if (!isMasuk) {
+    if (detailTransMatchedBatch) {
+      document.getElementById('detailTransBatchMatchedTanggal').textContent = tanggalIndo(detailTransMatchedBatch.tanggal_masuk);
+      document.getElementById('detailTransBatchMatchedSisa').textContent = detailTransMatchedBatch.sisa;
+      document.getElementById('detailTransBatchMatched').style.display = 'grid';
+      document.getElementById('detailTransBatchFallbackWrap').style.display = 'none';
+    } else {
+      document.getElementById('detailTransBatchMatched').style.display = 'none';
+      document.getElementById('detailTransBatchFallbackWrap').style.display = 'block';
+      await muatPilihanBatchDetail(detailProduk.id);
+    }
+  }
+}
+
+async function muatPilihanBatchDetail(produkId) {
+  const sel = document.getElementById('detailTransBatchSelect');
+  sel.innerHTML = '';
+  const { data } = await sb
+    .from('gudang_batch')
+    .select('*')
+    .eq('produk_id', produkId)
+    .gt('sisa', 0)
+    .order('tanggal_masuk', { ascending: true });
+  (data || []).forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b.id;
+    opt.textContent = `${tanggalIndo(b.tanggal_masuk)} — sisa ${b.sisa}`;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('btnSimpanTransaksiDetail').addEventListener('click', async () => {
+  const jenis = document.getElementById('detailTransJenis').value;
+  const jumlah = Number(document.getElementById('detailTransJumlah').value);
+  const err = document.getElementById('detailTransError');
+  err.style.display = 'none';
+  if (!jumlah || jumlah <= 0) {
+    err.textContent = 'Isi jumlah yang benar';
+    err.style.display = 'block';
+    return;
+  }
+
+  const payload = {
+    user_id: currentUser.id,
+    produk_id: detailProduk.id,
+    jenis: jenis,
+    jumlah: jumlah
+  };
+
+  if (jenis === 'masuk') {
+    const tanggalMasuk = document.getElementById('detailTransTanggalMasuk').value;
+    if (!tanggalMasuk) {
+      err.textContent = 'Isi tanggal masuk';
+      err.style.display = 'block';
+      return;
+    }
+    const hargaBeli = Number(document.getElementById('detailTransHargaBeli').value) || null;
+    payload.asal_barang = document.getElementById('detailTransAsal').value.trim() || null;
+    payload.harga_beli_saat_itu = hargaBeli;
+
+    let batch;
+    try {
+      batch = await getOrBuatBatch(detailProduk.id, tanggalMasuk, hargaBeli, detailProduk.kode_barang);
+    } catch (e) {
+      err.textContent = 'Gagal menyiapkan batch: ' + e.message;
+      err.style.display = 'block';
+      return;
+    }
+    payload.batch_id = batch.id;
+
+  } else {
+    const batchId = detailTransMatchedBatch ? detailTransMatchedBatch.id : document.getElementById('detailTransBatchSelect').value;
+    if (!batchId) {
+      err.textContent = 'Belum ada batch aktif untuk barang ini';
+      err.style.display = 'block';
+      return;
+    }
+    payload.batch_id = batchId;
+  }
+
+  const { error } = await sb.from('gudang_mutasi_stok').insert(payload);
+  if (error) {
+    if (error.message.includes('Stok batch tidak cukup')) {
+      err.textContent = 'Stok batch ini tidak cukup. Pilih batch lain untuk sisanya.';
+      detailTransMatchedBatch = null;
+      document.getElementById('detailTransBatchMatched').style.display = 'none';
+      document.getElementById('detailTransBatchFallbackWrap').style.display = 'block';
+      await muatPilihanBatchDetail(detailProduk.id);
+    } else {
+      err.textContent = 'Gagal menyimpan: ' + error.message;
+    }
+    err.style.display = 'block';
+    return;
+  }
+
+  document.getElementById('detailTransaksiForm').style.display = 'none';
+  detailTransMatchedBatch = null;
+  const success = document.getElementById('detailTransSuccess');
+  success.style.display = 'block';
+  setTimeout(() => { success.style.display = 'none'; }, 3000);
+
+  await refreshDetailProduk();
+});
+
+async function refreshDetailProduk() {
+  const { data } = await sb.from('gudang_produk').select('*').eq('id', detailProduk.id).single();
+  if (data) {
+    detailProduk = data;
+    document.getElementById('detailHargaBeli').textContent = formatRupiah(data.harga_beli);
+    document.getElementById('detailMargin').textContent = formatRupiah(data.margin);
+    document.getElementById('detailSisaStok').textContent = data.sisa_stok;
+  }
+  muatBatchDetail(detailProduk.id);
+  muatBarcodeDetail(detailProduk.id);
+  loadStok();
+}
 
 function fotoPublicUrl(path) {
   return sb.storage.from(FOTO_BUCKET).getPublicUrl(path).data.publicUrl;
