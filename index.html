@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gadungan — Manajemen Gudang</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#EE3B3D">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MADOKU">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -164,7 +171,7 @@
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 84px;
+    bottom: 20px;
     max-width: 480px;
     margin: 0 auto;
     display: flex;
@@ -296,28 +303,7 @@
     cursor: pointer;
     padding: 0;
   }
-  nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    display: flex;
-    max-width: 480px;
-    margin: 0 auto;
-  }
-  nav button {
-    flex: 1;
-    background: none;
-    border: none;
-    padding: 12px 0 10px;
-    font-size: 11px;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  nav button.active { color: var(--accent); font-weight: 600; }
-  nav button .icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
   .view { display: none; }
   .view.active { display: block; }
   .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef0e5; color: var(--success); margin-left: 6px; }
@@ -437,9 +423,6 @@
 
   </main>
 
-  <nav>
-    <button data-view="view-stok" class="active"><span class="icon">&#128230;</span>Stok</button>
-  </nav>
 </div>
 
 <div class="modal-overlay" id="confirmOverlay">
@@ -503,14 +486,7 @@ let produkBaruTerakhir = null;
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.view === id));
 }
-document.querySelectorAll('nav button').forEach(b => {
-  b.addEventListener('click', () => {
-    showView(b.dataset.view);
-    if (b.dataset.view === 'view-stok') loadStok();
-  });
-});
 
 async function checkSession() {
   const { data } = await sb.auth.getSession();
@@ -1301,6 +1277,13 @@ document.getElementById('btnHapusProduk').addEventListener('click', async () => 
 });
 
 checkSession();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.error('Gagal daftar service worker:', err));
+  });
+}
 </script>
 </body>
 </html>
