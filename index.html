@@ -304,6 +304,25 @@
     padding: 0;
   }
 
+  .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .home-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 22px 10px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: #fdfcf9;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .home-item .home-icon { font-size: 28px; }
+  .home-item .home-label { font-size: 13px; font-weight: 600; color: var(--ink); text-align: center; }
+  .home-item.disabled { cursor: default; opacity: 0.55; }
+  .home-item .home-soon { font-size: 10px; color: var(--muted); }
+
   .view { display: none; }
   .view.active { display: block; }
   .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef0e5; color: var(--success); margin-left: 6px; }
@@ -328,13 +347,51 @@
 
 <div id="appShell" style="display:none;">
   <header>
+    <button id="btnHome" type="button" style="width:auto; padding:6px 10px; margin-right:8px;">&#127968;</button>
     <h1>Gadungan</h1>
     <button id="btnLogout">Keluar</button>
   </header>
 
   <main>
 
-    <section class="view active" id="view-stok">
+    <section class="view active" id="view-home">
+      <div class="card">
+        <h2>Menu</h2>
+        <div class="home-grid">
+          <button class="home-item" id="homeStok" type="button">
+            <span class="home-icon">&#128230;</span>
+            <span class="home-label">Stok</span>
+          </button>
+          <div class="home-item disabled">
+            <span class="home-icon">&#129534;</span>
+            <span class="home-label">Penjualan</span>
+            <span class="home-soon">Segera hadir</span>
+          </div>
+          <div class="home-item disabled">
+            <span class="home-icon">&#128202;</span>
+            <span class="home-label">Laporan</span>
+            <span class="home-soon">Segera hadir</span>
+          </div>
+          <div class="home-item disabled">
+            <span class="home-icon">&#128666;</span>
+            <span class="home-label">Supplier</span>
+            <span class="home-soon">Segera hadir</span>
+          </div>
+          <div class="home-item disabled">
+            <span class="home-icon">&#127991;&#65039;</span>
+            <span class="home-label">Kategori Barang</span>
+            <span class="home-soon">Segera hadir</span>
+          </div>
+          <div class="home-item disabled">
+            <span class="home-icon">&#9881;&#65039;</span>
+            <span class="home-label">Pengaturan</span>
+            <span class="home-soon">Segera hadir</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view" id="view-stok">
       <div class="card">
         <h2>Daftar barang</h2>
         <input type="text" id="stokSearch" placeholder="Cari nama atau kode barang" style="margin-bottom:8px;">
@@ -494,12 +551,21 @@ async function checkSession() {
     currentUser = data.session.user;
     document.getElementById('loginView').style.display = 'none';
     document.getElementById('appShell').style.display = 'block';
-    loadStok();
+    showView('view-home');
   } else {
     document.getElementById('loginView').style.display = 'block';
     document.getElementById('appShell').style.display = 'none';
   }
 }
+
+document.getElementById('btnHome').addEventListener('click', () => {
+  showView('view-home');
+});
+
+document.getElementById('homeStok').addEventListener('click', () => {
+  showView('view-stok');
+  loadStok();
+});
 
 document.getElementById('btnLogin').addEventListener('click', async () => {
   const email = document.getElementById('loginEmail').value.trim();
