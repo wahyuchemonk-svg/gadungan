@@ -254,6 +254,7 @@
   .stok-list li:last-child { border-bottom: none; }
   .stok-list .nama { font-weight: 600; font-size: 14px; }
   .stok-list .kode { font-family: monospace; font-size: 11px; color: var(--muted); }
+  .stok-list .usia-batch { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .stok-list .sisa { font-size: 15px; font-weight: 600; }
   .sisa.low { color: var(--danger); }
   .stok-list li.clickable {
@@ -895,6 +896,31 @@ function isoToDDMMYYYY(iso) {
   const [y, m, d] = iso.split('-');
   return d + m + y;
 }
+function usiaBarang(tanggalMasukISO) {
+  const masuk = new Date(tanggalMasukISO + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  let tahun = now.getFullYear() - masuk.getFullYear();
+  let bulan = now.getMonth() - masuk.getMonth();
+  let hari = now.getDate() - masuk.getDate();
+
+  if (hari < 0) {
+    bulan -= 1;
+    const akhirBulanLalu = new Date(now.getFullYear(), now.getMonth(), 0);
+    hari += akhirBulanLalu.getDate();
+  }
+  if (bulan < 0) {
+    tahun -= 1;
+    bulan += 12;
+  }
+
+  const bagian = [];
+  if (tahun > 0) bagian.push(tahun + ' tahun');
+  if (bulan > 0) bagian.push(bulan + ' bulan');
+  if (hari > 0 || bagian.length === 0) bagian.push(hari + ' hari');
+  return bagian.join(' ');
+}
 function parseBarcodeBatch(text) {
   const m = text.match(/^(.+)-(\d{2})(\d{2})(\d{4})$/);
   if (!m) return null;
@@ -972,6 +998,7 @@ async function muatBatchDetail(produkId) {
     li.innerHTML = `
       <div>
         <div class="nama">Masuk ${tanggalIndo(b.tanggal_masuk)}</div>
+        <div class="usia-batch">${usiaBarang(b.tanggal_masuk)}</div>
       </div>
       <div class="stok-right">
         <div class="sisa">${b.sisa}</div>
