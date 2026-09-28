@@ -463,9 +463,9 @@
           <button class="primary" id="btnSimpanTransaksiDetail" type="button">Simpan transaksi</button>
           <button class="secondary" id="btnBatalTransaksiDetail" type="button">Batal</button>
         </div>
-        <div id="detailBarcodeWrap" style="display:none; text-align:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--border);">
-          <label>Barcode batch terakhir</label>
-          <svg id="detailBarcodeSvg" style="background:#fff;"></svg>
+		<div id="detailBarcodeWrap" style="display:none; text-align:center; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); overflow-x:auto;">
+		  <label>Barcode batch terakhir</label>
+		  <svg id="detailBarcodeSvg" style="background:#fff; max-width:100%; height:auto; display:inline-block;"></svg>
           <p class="hint" id="detailBarcodeInfo" style="margin:4px 0 10px;"></p>
           <button class="secondary" id="btnPrintDetailBarcode" type="button">Cetak label</button>
         </div>
@@ -810,6 +810,11 @@ document.getElementById('btnModalBaruSimpan').addEventListener('click', async ()
     err.style.display = 'block';
     return;
   }
+  if (!/^\d+$/.test(kode)) {
+    err.textContent = 'Kode barang cuma boleh angka';
+    err.style.display = 'block';
+    return;
+  }
   if (!jumlahAwal || jumlahAwal <= 0) {
     err.textContent = 'Isi jumlah stok masuk yang benar';
     err.style.display = 'block';
@@ -892,9 +897,9 @@ function tanggalIndo(iso) {
   const [y, m, d] = iso.split('-');
   return `${d}-${m}-${y}`;
 }
-function isoToDDMMYYYY(iso) {
+function isoToDDMMYY(iso) {
   const [y, m, d] = iso.split('-');
-  return d + m + y;
+  return d + m + y.slice(2);
 }
 function usiaBarang(tanggalMasukISO) {
   const masuk = new Date(tanggalMasukISO + 'T00:00:00');
@@ -922,15 +927,15 @@ function usiaBarang(tanggalMasukISO) {
   return bagian.join(' ');
 }
 function parseBarcodeBatch(text) {
-  const m = text.match(/^(.+)-(\d{2})(\d{2})(\d{4})$/);
+  const m = text.match(/^(\d+)(\d{2})(\d{2})(\d{2})$/);
   if (!m) return null;
-  const [, kode, dd, mm, yyyy] = m;
-  return { kode, tanggalISO: `${yyyy}-${mm}-${dd}` };
+  const [, kode, dd, mm, yy] = m;
+  return { kode, tanggalISO: `20${yy}-${mm}-${dd}` };
 }
 
 function randomKode() {
-  const n = Math.floor(1000 + Math.random() * 9000);
-  return 'WRG-' + n;
+  const n = Math.floor(100000 + Math.random() * 900000);
+  return String(n);
 }
 
 async function getOrBuatBatch(produkId, tanggalMasukISO, hargaBeli, kodeBarang) {
@@ -942,7 +947,7 @@ async function getOrBuatBatch(produkId, tanggalMasukISO, hargaBeli, kodeBarang) 
     .maybeSingle();
   if (existing) return existing;
 
-  const barcodeIsi = kodeBarang + '-' + isoToDDMMYYYY(tanggalMasukISO);
+  const barcodeIsi = kodeBarang + isoToDDMMYY(tanggalMasukISO);
   const { data: baru, error } = await sb.from('gudang_batch').insert({
     user_id: currentUser.id,
     produk_id: produkId,
@@ -1023,7 +1028,14 @@ async function muatBarcodeDetail(produkId) {
   if (!detailProduk || detailProduk.id !== produkId) return;
   if (!data) return;
 
-  JsBarcode('#detailBarcodeSvg', data.barcode_isi, { format: 'CODE128', width: 2, height: 60, fontSize: 14, margin: 8 });
+  JsBarcode('#detailBarcodeSvg', data.barcode_isi, {
+    format: 'CODE128C',
+    width: 2,
+    height: 60,
+    fontSize: 14,
+    margin: 8,
+    text: detailProduk.kode_barang + ' ' + isoToDDMMYY(data.tanggal_masuk)
+  });
   document.getElementById('detailBarcodeInfo').textContent = 'Tanggal masuk: ' + tanggalIndo(data.tanggal_masuk);
   wrap.style.display = 'block';
 }
