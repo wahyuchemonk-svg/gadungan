@@ -288,6 +288,23 @@
     padding: 8px;
   }
   .foto-slot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .foto-preview-content { position: relative; max-width: 92vw; max-height: 88vh; }
+  .foto-preview-content img { max-width: 92vw; max-height: 88vh; display: block; border-radius: 10px; }
+  .foto-preview-close {
+    position: absolute;
+    top: -14px;
+    right: -14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(36, 35, 31, 0.3);
+  }
   .foto-slot .btn-hapus-foto {
     position: absolute;
     top: 4px;
@@ -530,6 +547,13 @@
     <div class="modal-actions">
       <button class="secondary" id="btnTutupModalKamera" type="button">Tutup</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="fotoPreviewOverlay">
+  <div class="foto-preview-content">
+    <button type="button" id="btnTutupFotoPreview" class="foto-preview-close">&times;</button>
+    <img id="fotoPreviewImg" src="" alt="Preview foto produk">
   </div>
 </div>
 
@@ -1217,6 +1241,10 @@ function renderFotoGrid() {
     if (path) {
       const img = document.createElement('img');
       img.src = fotoPublicUrl(path);
+      img.addEventListener('click', () => {
+        document.getElementById('fotoPreviewImg').src = img.src;
+        document.getElementById('fotoPreviewOverlay').style.display = 'flex';
+      });
       slot.appendChild(img);
       const btnHapus = document.createElement('button');
       btnHapus.type = 'button';
@@ -1236,6 +1264,15 @@ function renderFotoGrid() {
     grid.appendChild(slot);
   }
 }
+
+document.getElementById('btnTutupFotoPreview').addEventListener('click', () => {
+  document.getElementById('fotoPreviewOverlay').style.display = 'none';
+});
+document.getElementById('fotoPreviewOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'fotoPreviewOverlay') {
+    document.getElementById('fotoPreviewOverlay').style.display = 'none';
+  }
+});
 
 document.getElementById('fotoInput').addEventListener('change', async (e) => {
   const file = e.target.files[0];
