@@ -270,6 +270,24 @@
   .foto-count-badge { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #eaf3fb; color: #2471a3; vertical-align: middle; white-space: nowrap; }
   .stok-right { display: flex; align-items: center; gap: 8px; }
   .chevron { color: var(--muted); font-size: 18px; line-height: 1; }
+  .cart-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .cart-item:last-child { border-bottom: none; }
+  .cart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .cart-nama { font-weight: 600; font-size: 14px; }
+  .cart-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .cart-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .cart-row button.qty-btn { width: 36px; height: 36px; padding: 0; font-size: 18px; flex: none; }
+  .cart-row .qty-input { width: 60px; text-align: center; flex: none; }
+  .cart-row .harga-input { flex: 1; min-width: 0; }
+  .cart-sub { text-align: right; font-size: 13px; font-weight: 600; margin-top: 6px; }
+  .struk-kertas { background: #fff; color: #111; font-family: 'Courier New', monospace; font-size: 13px; padding: 16px 14px; border-radius: 6px; max-width: 320px; margin: 0 auto 12px; }
+  .struk-tengah { text-align: center; }
+  .struk-nama { font-size: 18px; font-weight: 700; letter-spacing: 2px; }
+  .struk-garis { border-top: 1px dashed #888; margin: 8px 0; }
+  .struk-baris { display: flex; justify-content: space-between; gap: 8px; }
+  .struk-baris.tebal { font-weight: 700; }
+  .struk-item { margin-top: 4px; }
+  .struk-kecil { font-size: 11px; color: #666; }
   .foto-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 4px; }
   .foto-slot {
     aspect-ratio: 1 / 1;
@@ -380,11 +398,10 @@
             <span class="home-icon">&#128230;</span>
             <span class="home-label">Stok</span>
           </button>
-          <div class="home-item disabled">
+          <button class="home-item" id="homePenjualan" type="button">
             <span class="home-icon">&#129534;</span>
             <span class="home-label">Penjualan</span>
-            <span class="home-soon">Segera hadir</span>
-          </div>
+          </button>
           <div class="home-item disabled">
             <span class="home-icon">&#128202;</span>
             <span class="home-label">Laporan</span>
@@ -431,6 +448,55 @@
           <button class="secondary" id="fabAktifkanKamera" type="button">&#128247; Aktifkan kamera</button>
         </div>
         <button class="fab-main" id="fabMain" type="button" aria-label="Menu">+</button>
+      </div>
+    </section>
+
+    <section class="view" id="view-penjualan">
+      <div class="card">
+        <h2>Penjualan</h2>
+        <input type="text" id="penjualanCari" placeholder="Cari nama atau kode barang" autocomplete="off">
+        <ul class="stok-list" id="penjualanHasilCari" style="display:none; margin-top:6px;"></ul>
+        <button class="secondary" id="btnScanJual" type="button">&#128247; Scan barcode</button>
+        <p class="error" id="penjualanPesan"></p>
+        <button class="secondary" id="btnRiwayatNota" type="button">&#128203; Riwayat nota</button>
+      </div>
+      <div class="card">
+        <h2>Keranjang</h2>
+        <div id="penjualanKeranjang"></div>
+        <p class="empty" id="penjualanEmpty">Keranjang masih kosong. Cari barang di atas untuk menambahkan.</p>
+        <p style="margin-top:14px; font-weight:600; display:flex; justify-content:space-between;">
+          <span>Total</span><span id="penjualanTotal">Rp 0</span>
+        </p>
+      </div>
+      <div class="card">
+        <h2>Pembayaran</h2>
+        <label for="penjualanMetode">Metode bayar</label>
+        <select id="penjualanMetode">
+          <option value="tunai">Tunai</option>
+          <option value="debet">Debet</option>
+        </select>
+        <div id="penjualanTunaiWrap">
+          <label for="penjualanUang">Uang diterima</label>
+          <div class="row">
+            <input type="number" id="penjualanUang" inputmode="numeric" min="0" placeholder="0">
+            <button class="small" id="btnUangPas" type="button">Uang pas</button>
+          </div>
+          <p style="margin-top:10px; font-weight:600; display:flex; justify-content:space-between;">
+            <span id="penjualanKembalianLabel">Kembalian</span>
+            <span id="penjualanKembalian">Rp 0</span>
+          </p>
+        </div>
+        <p class="error" id="penjualanBayarError"></p>
+        <button class="primary" id="btnSimpanPenjualan" type="button">Simpan nota</button>
+      </div>
+    </section>
+	
+    <section class="view" id="view-riwayat">
+      <div class="card">
+        <h2>Riwayat nota</h2>
+        <button class="secondary" id="btnRiwayatKembali" type="button">&larr; Kembali ke penjualan</button>
+        <ul class="stok-list" id="riwayatList" style="margin-top:10px;"></ul>
+        <p class="empty" id="riwayatEmpty" style="display:none;">Belum ada nota.</p>
       </div>
     </section>
 
@@ -550,6 +616,45 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modalDetailNotaOverlay">
+  <div class="modal-card form-modal">
+    <h3>Detail nota</h3>
+    <p id="detailNotaWaktu"></p>
+    <div id="detailNotaItems"></div>
+    <p style="margin-top:12px; font-weight:600; display:flex; justify-content:space-between;">
+      <span>Total</span><span id="detailNotaTotal"></span>
+    </p>
+    <p id="detailNotaBayar"></p>
+    <div class="modal-actions">
+      <button class="secondary" id="btnDetailNotaStruk" type="button">Lihat struk</button>
+      <button class="secondary" id="btnDetailNotaTutup" type="button">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalNotaOverlay">
+  <div class="modal-card">
+    <h3>Nota tersimpan</h3>
+    <p>Total: <b id="notaTotal"></b></p>
+    <p id="notaMetode"></p>
+    <p id="notaKembalianWrap" style="font-size:18px;">Kembalian: <b id="notaKembalian"></b></p>
+    <div class="modal-actions">
+      <button class="secondary" id="btnNotaLihatStruk" type="button">Lihat struk</button>
+      <button class="primary" id="btnNotaSelesai" type="button">Selesai</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalStrukOverlay">
+  <div class="modal-card form-modal">
+    <div class="struk-kertas" id="strukIsi"></div>
+    <div class="modal-actions">
+      <button class="secondary" id="btnStrukTutup" type="button">Tutup</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="fotoPreviewOverlay">
   <div class="foto-preview-content">
     <button type="button" id="btnTutupFotoPreview" class="foto-preview-close">&times;</button>
@@ -590,6 +695,523 @@ document.getElementById('btnHome').addEventListener('click', () => {
 document.getElementById('homeStok').addEventListener('click', () => {
   showView('view-stok');
   loadStok();
+});
+
+document.getElementById('homePenjualan').addEventListener('click', () => {
+  showView('view-penjualan');
+  loadStok();
+});
+
+// ===== Keranjang penjualan =====
+let keranjang = [];
+
+function totalKeranjang() {
+  return keranjang.reduce((s, it) => s + it.jumlah * it.harga, 0);
+}
+
+function updateTotalKeranjang() {
+  document.getElementById('penjualanTotal').textContent = formatRupiah(totalKeranjang());
+  updatePembayaran();
+}
+
+function renderHasilCariJual() {
+  const list = document.getElementById('penjualanHasilCari');
+  const term = document.getElementById('penjualanCari').value.trim().toLowerCase();
+  list.innerHTML = '';
+  if (!term) { list.style.display = 'none'; return; }
+  list.style.display = 'block';
+
+  const hasil = stokData.filter(p =>
+    Number(p.sisa_stok) > 0 && (
+      p.nama_barang.toLowerCase().includes(term) ||
+      p.kode_barang.toLowerCase().includes(term))
+  ).slice(0, 8);
+
+  if (hasil.length === 0) {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="hint">Tidak ada barang yang cocok, atau stoknya habis.</span>';
+    list.appendChild(li);
+    return;
+  }
+  hasil.forEach(p => {
+    const li = document.createElement('li');
+    li.className = 'clickable';
+    li.innerHTML = `
+      <div>
+        <div class="nama">${escapeHtml(p.nama_barang)}</div>
+        <div class="kode">${escapeHtml(p.kode_barang)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:600;">${formatRupiah(p.harga_jual)}</div>
+        <div class="kode">Sisa ${p.sisa_stok}</div>
+      </div>
+    `;
+    li.addEventListener('click', () => tambahKeKeranjang(p));
+    list.appendChild(li);
+  });
+}
+
+function batchItem(it) {
+  return it.batches.find(b => b.id === it.batchId);
+}
+function sisaBatchItem(it) {
+  const b = batchItem(it);
+  return b ? Number(b.sisa) : 0;
+}
+
+function tampilPesanJual(teks) {
+  const el = document.getElementById('penjualanPesan');
+  el.textContent = teks;
+  el.style.display = 'block';
+}
+function sembunyiPesanJual() {
+  document.getElementById('penjualanPesan').style.display = 'none';
+}
+
+async function muatBatchAktif(produkId) {
+  const { data, error } = await sb
+    .from('gudang_batch')
+    .select('*')
+    .eq('produk_id', produkId)
+    .gt('sisa', 0)
+    .order('tanggal_masuk', { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+// tanggalBatchISO diisi kalau barang datang dari scan barcode (kode + tanggal)
+async function tambahKeKeranjang(p, tanggalBatchISO) {
+  sembunyiPesanJual();
+  const batches = await muatBatchAktif(p.id);
+  if (batches.length === 0) {
+    tampilPesanJual('Stok ' + p.nama_barang + ' habis.');
+    return;
+  }
+
+  let target = null;
+  if (tanggalBatchISO) {
+    target = batches.find(b => b.tanggal_masuk === tanggalBatchISO);
+    if (!target) {
+      tampilPesanJual('Batch ' + tanggalIndo(tanggalBatchISO) + ' untuk ' + p.nama_barang + ' tidak ditemukan atau sudah habis.');
+      return;
+    }
+  } else {
+    // batch tertua yang masih punya sisa setelah dikurangi yang sudah ada di keranjang
+    target = batches.find(b => {
+      const baris = keranjang.find(x => x.batchId === b.id);
+      return Number(b.sisa) - (baris ? baris.jumlah : 0) > 0;
+    });
+    if (!target) {
+      tampilPesanJual('Semua stok ' + p.nama_barang + ' sudah masuk keranjang.');
+      return;
+    }
+  }
+
+  const ada = keranjang.find(x => x.batchId === target.id);
+  if (ada) {
+    if (ada.jumlah >= Number(target.sisa)) {
+      tampilPesanJual('Jumlah sudah mencapai sisa batch ' + tanggalIndo(target.tanggal_masuk) + '.');
+      return;
+    }
+    ada.jumlah += 1;
+    ada.batches = batches;
+  } else {
+    keranjang.push({
+      produkId: p.id,
+      kode: p.kode_barang,
+      nama: p.nama_barang,
+      hargaNormal: Number(p.harga_jual),
+      harga: Number(p.harga_jual),
+      jumlah: 1,
+      batches: batches,
+      batchId: target.id
+    });
+  }
+  document.getElementById('penjualanCari').value = '';
+  renderHasilCariJual();
+  renderKeranjang();
+}
+
+async function onScanJual(decodedText) {
+  const parsed = parseBarcodeBatch(decodedText);
+  const kode = parsed ? parsed.kode : decodedText;
+  const { data: p } = await sb
+    .from('gudang_produk')
+    .select('*')
+    .eq('kode_barang', kode)
+    .maybeSingle();
+  if (!p) {
+    tampilPesanJual('Barang dengan kode ' + kode + ' belum terdaftar.');
+    return;
+  }
+  await tambahKeKeranjang(p, parsed ? parsed.tanggalISO : null);
+}
+
+document.getElementById('btnScanJual').addEventListener('click', () => {
+  scanTujuan = 'jual';
+  document.getElementById('modalKameraOverlay').style.display = 'flex';
+});
+
+function renderKeranjang() {
+  const wrap = document.getElementById('penjualanKeranjang');
+  const empty = document.getElementById('penjualanEmpty');
+  wrap.innerHTML = '';
+  empty.style.display = keranjang.length ? 'none' : 'block';
+  keranjang.forEach((it, i) => {
+    const opsiBatch = it.batches.map(b => {
+      const dipakaiBarisLain = keranjang.some((x, j) => j !== i && x.batchId === b.id);
+      return `<option value="${b.id}" ${b.id === it.batchId ? 'selected' : ''} ${dipakaiBarisLain ? 'disabled' : ''}>` +
+        `${tanggalIndo(b.tanggal_masuk)} &middot; sisa ${b.sisa} &middot; ${usiaBarang(b.tanggal_masuk)}</option>`;
+    }).join('');
+
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.dataset.idx = i;
+    div.innerHTML = `
+      <div class="cart-head">
+        <div>
+          <div class="cart-nama">${escapeHtml(it.nama)}</div>
+          <div class="cart-meta">${escapeHtml(it.kode)} &middot; Harga normal ${formatRupiah(it.hargaNormal)}</div>
+        </div>
+        <button class="small" type="button" data-aksi="hapus">Hapus</button>
+      </div>
+      <div class="cart-meta" style="margin-top:8px;">Batch (tanggal masuk)</div>
+      <div class="cart-row">
+        <select data-aksi="batch" aria-label="Batch">${opsiBatch}</select>
+      </div>
+      <div class="cart-row">
+        <button class="small qty-btn" type="button" data-aksi="kurang">&minus;</button>
+        <input class="qty-input" type="number" inputmode="numeric" min="1" max="${sisaBatchItem(it)}" value="${it.jumlah}" data-aksi="jumlah" aria-label="Jumlah">
+        <button class="small qty-btn" type="button" data-aksi="tambah">+</button>
+        <input class="harga-input" type="number" inputmode="numeric" min="0" value="${it.harga}" data-aksi="harga" aria-label="Harga satuan">
+      </div>
+      <div class="cart-sub">Subtotal: <span data-sub>${formatRupiah(it.jumlah * it.harga)}</span></div>
+    `;
+    wrap.appendChild(div);
+  });
+  updateTotalKeranjang();
+}
+
+document.getElementById('penjualanCari').addEventListener('input', renderHasilCariJual);
+
+const keranjangWrap = document.getElementById('penjualanKeranjang');
+
+keranjangWrap.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-aksi]');
+  if (!btn) return;
+  const idx = Number(btn.closest('.cart-item').dataset.idx);
+  const it = keranjang[idx];
+  const aksi = btn.dataset.aksi;
+  if (aksi === 'hapus') keranjang.splice(idx, 1);
+  else if (aksi === 'tambah' && it.jumlah < sisaBatchItem(it)) it.jumlah += 1;
+  else if (aksi === 'kurang' && it.jumlah > 1) it.jumlah -= 1;
+  renderKeranjang();
+});
+
+keranjangWrap.addEventListener('input', (e) => {
+  const el = e.target.closest('input[data-aksi]');
+  if (!el) return;
+  const row = el.closest('.cart-item');
+  const it = keranjang[Number(row.dataset.idx)];
+  const v = Number(el.value);
+  if (el.dataset.aksi === 'jumlah') {
+    it.jumlah = Math.min(Math.max(Math.floor(v) || 1, 1), Math.max(sisaBatchItem(it), 1));
+  } else if (el.dataset.aksi === 'harga') {
+    it.harga = Math.max(v || 0, 0);
+  }
+  row.querySelector('[data-sub]').textContent = formatRupiah(it.jumlah * it.harga);
+  updateTotalKeranjang();
+});
+
+keranjangWrap.addEventListener('change', (e) => {
+  const row = e.target.closest('.cart-item');
+  if (!row) return;
+  const it = keranjang[Number(row.dataset.idx)];
+  if (e.target.matches('select[data-aksi="batch"]')) {
+    it.batchId = e.target.value;
+    it.jumlah = Math.min(it.jumlah, Math.max(sisaBatchItem(it), 1));
+    renderKeranjang();
+  } else if (e.target.matches('input[data-aksi="jumlah"]')) {
+    e.target.value = it.jumlah;   // rapikan kalau diketik di luar batas
+  }
+});
+
+// ===== Pembayaran & simpan nota =====
+function tampilErrBayar(teks) {
+  const el = document.getElementById('penjualanBayarError');
+  el.textContent = teks;
+  el.style.display = 'block';
+}
+
+function updatePembayaran() {
+  const metode = document.getElementById('penjualanMetode').value;
+  document.getElementById('penjualanTunaiWrap').style.display = metode === 'tunai' ? 'block' : 'none';
+  if (metode !== 'tunai') return;
+
+  const uang = Number(document.getElementById('penjualanUang').value) || 0;
+  const selisih = uang - totalKeranjang();
+  const label = document.getElementById('penjualanKembalianLabel');
+  const nilai = document.getElementById('penjualanKembalian');
+  if (uang > 0 && selisih < 0) {
+    label.textContent = 'Kurang';
+    nilai.textContent = formatRupiah(-selisih);
+  } else {
+    label.textContent = 'Kembalian';
+    nilai.textContent = formatRupiah(uang > 0 ? selisih : 0);
+  }
+}
+
+document.getElementById('penjualanMetode').addEventListener('change', updatePembayaran);
+document.getElementById('penjualanUang').addEventListener('input', updatePembayaran);
+document.getElementById('btnUangPas').addEventListener('click', () => {
+  document.getElementById('penjualanUang').value = totalKeranjang();
+  updatePembayaran();
+});
+
+document.getElementById('btnSimpanPenjualan').addEventListener('click', async () => {
+  document.getElementById('penjualanBayarError').style.display = 'none';
+
+  if (keranjang.length === 0) {
+    tampilErrBayar('Keranjang masih kosong.');
+    return;
+  }
+  const metode = document.getElementById('penjualanMetode').value;
+  const total = totalKeranjang();
+  const uang = Number(document.getElementById('penjualanUang').value) || 0;
+  if (metode === 'tunai' && uang < total) {
+    tampilErrBayar('Uang diterima kurang dari total.');
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanPenjualan');
+  btn.disabled = true;
+  const { data: notaId, error } = await sb.rpc('gudang_simpan_penjualan', {
+    p_tanggal: todayISO(),
+    p_nama_penjual: null,
+    p_catatan: null,
+    p_metode_bayar: metode,
+    p_uang_diterima: metode === 'tunai' ? uang : total,
+    p_items: keranjang.map(it => ({
+      produk_id: it.produkId,
+      batch_id: it.batchId,
+      jumlah: it.jumlah,
+      harga_satuan: it.harga
+    }))
+  });
+  btn.disabled = false;
+
+  if (error) {
+    if ((error.message || '').includes('tidak cukup')) {
+      tampilErrBayar('Stok salah satu batch tidak cukup. Cek jumlah di keranjang.');
+    } else {
+      tampilErrBayar('Gagal menyimpan nota: ' + error.message);
+    }
+    return;   // keranjang tetap utuh
+  }
+
+  // ambil angka resmi dari database supaya sama persis dengan yang tercatat
+  const { data: nota } = await sb
+    .from('gudang_penjualan')
+    .select('total, metode_bayar, uang_diterima, kembalian')
+    .eq('id', notaId)
+    .maybeSingle();
+  const hasil = nota || {
+    total, metode_bayar: metode,
+    uang_diterima: metode === 'tunai' ? uang : total,
+    kembalian: metode === 'tunai' ? uang - total : 0
+  };
+
+  notaTerakhirId = notaId;
+  keranjang = [];
+  renderKeranjang();
+  document.getElementById('penjualanUang').value = '';
+  document.getElementById('penjualanMetode').value = 'tunai';
+  updatePembayaran();
+  loadStok();
+
+  document.getElementById('notaTotal').textContent = formatRupiah(hasil.total);
+  document.getElementById('notaMetode').textContent = hasil.metode_bayar === 'tunai'
+    ? 'Tunai, diterima ' + formatRupiah(hasil.uang_diterima)
+    : 'Debet';
+  document.getElementById('notaKembalian').textContent = formatRupiah(hasil.kembalian);
+  document.getElementById('notaKembalianWrap').style.display = hasil.metode_bayar === 'tunai' ? 'block' : 'none';
+  document.getElementById('modalNotaOverlay').style.display = 'flex';
+});
+
+document.getElementById('btnNotaSelesai').addEventListener('click', () => {
+  document.getElementById('modalNotaOverlay').style.display = 'none';
+});
+
+// ===== Riwayat nota =====
+function waktuNota(iso) {
+  return new Date(iso).toLocaleString('id-ID', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+async function muatRiwayatNota() {
+  const list = document.getElementById('riwayatList');
+  const empty = document.getElementById('riwayatEmpty');
+  list.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  empty.style.display = 'none';
+
+  const { data, error } = await sb
+    .from('gudang_penjualan')
+    .select('id, tanggal, total, metode_bayar, uang_diterima, kembalian, created_at, gudang_penjualan_item(count)')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  list.innerHTML = '';
+  if (error) {
+    list.innerHTML = '<li><span class="hint">Gagal memuat riwayat.</span></li>';
+    return;
+  }
+  if (!data || data.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  data.forEach(n => {
+    const jml = n.gudang_penjualan_item && n.gudang_penjualan_item[0]
+      ? n.gudang_penjualan_item[0].count : 0;
+    const li = document.createElement('li');
+    li.className = 'clickable';
+    li.innerHTML = `
+      <div>
+        <div class="nama">${waktuNota(n.created_at)}</div>
+        <div class="kode">${jml} barang &middot; ${n.metode_bayar === 'tunai' ? 'Tunai' : 'Debet'}</div>
+      </div>
+      <div style="font-size:14px; font-weight:600;">${formatRupiah(n.total)}</div>
+    `;
+    li.addEventListener('click', () => bukaDetailNota(n));
+    list.appendChild(li);
+  });
+}
+
+async function bukaDetailNota(n) {
+  notaDetailAktifId = n.id;
+  document.getElementById('detailNotaWaktu').textContent = waktuNota(n.created_at);
+  document.getElementById('detailNotaTotal').textContent = formatRupiah(n.total);
+  document.getElementById('detailNotaBayar').textContent = n.metode_bayar === 'tunai'
+    ? 'Tunai, diterima ' + formatRupiah(n.uang_diterima) + ', kembalian ' + formatRupiah(n.kembalian)
+    : 'Debet';
+  const wrap = document.getElementById('detailNotaItems');
+  wrap.innerHTML = '<span class="hint">Memuat...</span>';
+  document.getElementById('modalDetailNotaOverlay').style.display = 'flex';
+
+  const { data, error } = await sb
+    .from('gudang_penjualan_item')
+    .select('*')
+    .eq('penjualan_id', n.id)
+    .order('created_at', { ascending: true });
+
+  wrap.innerHTML = '';
+  if (error || !data) {
+    wrap.innerHTML = '<span class="hint">Gagal memuat isi nota.</span>';
+    return;
+  }
+  data.forEach(it => {
+    const diskon = Number(it.harga_satuan) < Number(it.harga_normal);
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.innerHTML = `
+      <div class="cart-head">
+        <div class="cart-nama">${escapeHtml(it.nama_barang)}</div>
+        <div class="cart-nama">${formatRupiah(Number(it.jumlah) * Number(it.harga_satuan))}</div>
+      </div>
+      <div class="cart-meta">${Number(it.jumlah)} &times; ${formatRupiah(it.harga_satuan)}${diskon ? ' (normal ' + formatRupiah(it.harga_normal) + ')' : ''}</div>
+    `;
+    wrap.appendChild(div);
+  });
+}
+
+document.getElementById('btnRiwayatNota').addEventListener('click', () => {
+  showView('view-riwayat');
+  muatRiwayatNota();
+});
+document.getElementById('btnRiwayatKembali').addEventListener('click', () => {
+  showView('view-penjualan');
+});
+document.getElementById('btnDetailNotaTutup').addEventListener('click', () => {
+  document.getElementById('modalDetailNotaOverlay').style.display = 'none';
+});
+
+// ===== Struk =====
+// Ganti alamat & telepon di sini kalau sudah punya data asli
+const STRUK_TOKO = {
+  nama: 'MADOKU',
+  alamat: 'Jl. Melati No. 12, Jakarta',
+  telp: '0812-3456-7890'
+};
+
+let notaTerakhirId = null;
+let notaDetailAktifId = null;
+
+function formatAngka(n) {
+  return Number(n || 0).toLocaleString('id-ID');
+}
+
+function barisStruk(kiri, kanan, tebal) {
+  return `<div class="struk-baris${tebal ? ' tebal' : ''}"><span>${kiri}</span><span>${kanan}</span></div>`;
+}
+
+async function bukaStruk(notaId) {
+  const isi = document.getElementById('strukIsi');
+  isi.innerHTML = '<div class="struk-tengah">Memuat...</div>';
+  document.getElementById('modalStrukOverlay').style.display = 'flex';
+
+  const [notaRes, itemRes] = await Promise.all([
+    sb.from('gudang_penjualan').select('*').eq('id', notaId).maybeSingle(),
+    sb.from('gudang_penjualan_item').select('*').eq('penjualan_id', notaId).order('created_at', { ascending: true })
+  ]);
+  const n = notaRes.data;
+  if (!n || itemRes.error) {
+    isi.innerHTML = '<div class="struk-tengah">Gagal memuat struk.</div>';
+    return;
+  }
+
+  let html = `
+    <div class="struk-tengah struk-nama">${escapeHtml(STRUK_TOKO.nama)}</div>
+    <div class="struk-tengah">${escapeHtml(STRUK_TOKO.alamat)}</div>
+    <div class="struk-tengah">Telp. ${escapeHtml(STRUK_TOKO.telp)}</div>
+    <div class="struk-garis"></div>
+    ${barisStruk('No', escapeHtml(String(n.id).slice(0, 8).toUpperCase()))}
+    ${barisStruk('Waktu', waktuNota(n.created_at))}
+    <div class="struk-garis"></div>`;
+
+  (itemRes.data || []).forEach(it => {
+    const jml = Number(it.jumlah);
+    const hrg = Number(it.harga_satuan);
+    html += `<div class="struk-item">${escapeHtml(it.nama_barang)}</div>`;
+    html += barisStruk(`${jml} x ${formatAngka(hrg)}`, formatAngka(jml * hrg));
+    if (hrg < Number(it.harga_normal)) {
+      html += `<div class="struk-kecil">(harga normal ${formatAngka(it.harga_normal)})</div>`;
+    }
+  });
+
+  html += `<div class="struk-garis"></div>`;
+  html += barisStruk('TOTAL', formatRupiah(n.total), true);
+  if (n.metode_bayar === 'tunai') {
+    html += barisStruk('Tunai', formatRupiah(n.uang_diterima));
+    html += barisStruk('Kembali', formatRupiah(n.kembalian));
+  } else {
+    html += barisStruk('Debet', formatRupiah(n.total));
+  }
+  html += `<div class="struk-garis"></div>
+    <div class="struk-tengah">Terima kasih</div>
+    <div class="struk-tengah">Selamat berbelanja kembali</div>`;
+
+  isi.innerHTML = html;
+}
+
+document.getElementById('btnNotaLihatStruk').addEventListener('click', () => {
+  if (notaTerakhirId) bukaStruk(notaTerakhirId);
+});
+document.getElementById('btnDetailNotaStruk').addEventListener('click', () => {
+  if (notaDetailAktifId) bukaStruk(notaDetailAktifId);
+});
+document.getElementById('btnStrukTutup').addEventListener('click', () => {
+  document.getElementById('modalStrukOverlay').style.display = 'none';
 });
 
 document.getElementById('btnLogin').addEventListener('click', async () => {
@@ -736,8 +1358,11 @@ document.getElementById('fabDaftarBaru').addEventListener('click', () => {
 
 let scannerActiveStok = false;
 let html5QrCodeStok = null;
+let scanTujuan = 'stok';            // 'stok' atau 'jual'
+let scanSedangDiproses = false;     // cegah hasil scan terbaca dobel
 
 document.getElementById('fabAktifkanKamera').addEventListener('click', () => {
+  scanTujuan = 'stok';
   document.getElementById('fabMenu').classList.remove('open');
   document.getElementById('modalKameraOverlay').style.display = 'flex';
 });
@@ -764,10 +1389,20 @@ document.getElementById('btnToggleKameraStok').addEventListener('click', async (
 });
 
 async function onScanSuccessStok(decodedText) {
+  if (scanSedangDiproses) return;
+  scanSedangDiproses = true;
+  setTimeout(() => { scanSedangDiproses = false; }, 1500);
+
   if (html5QrCodeStok && scannerActiveStok) {
     await html5QrCodeStok.stop();
     scannerActiveStok = false;
     document.getElementById('btnToggleKameraStok').textContent = 'Mulai kamera';
+  }
+
+  if (scanTujuan === 'jual') {
+    document.getElementById('modalKameraOverlay').style.display = 'none';
+    await onScanJual(decodedText);
+    return;
   }
 
   const parsed = parseBarcodeBatch(decodedText);
