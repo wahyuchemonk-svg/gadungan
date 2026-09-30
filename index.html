@@ -201,19 +201,37 @@
     background: var(--surface);
     box-shadow: 0 4px 10px rgba(36, 35, 31, 0.2);
   }
-  .fab-main {
-    width: 56px;
-    height: 56px;
+  .fab-toggle {
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: var(--accent);
-    color: var(--accent-ink);
-    border: none;
-    font-size: 26px;
-    line-height: 1;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(36, 35, 31, 0.3);
+    box-shadow: 0 3px 8px rgba(36, 35, 31, 0.2);
+    cursor: pointer;
+    margin-top: 0;
+  }
+  .fab-toggle svg { transition: transform 0.15s; }
+  .fab-toggle.open svg { transform: rotate(180deg); }
+  .fab-home {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: 24px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(36, 35, 31, 0.2);
     cursor: pointer;
     margin-top: 0;
   }
@@ -441,14 +459,6 @@
         <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Tambah lewat tab "Buat kode".</p>
         <button class="secondary" id="btnDaftarBaruDariStok" type="button" style="display:none;">+ Daftarkan sebagai barang baru</button>
       </div>
-
-      <div class="fab-wrap">
-        <div class="fab-menu" id="fabMenu">
-          <button class="secondary" id="fabDaftarBaru" type="button">+ Daftarkan barang baru</button>
-          <button class="secondary" id="fabAktifkanKamera" type="button">&#128247; Aktifkan kamera</button>
-        </div>
-        <button class="fab-main" id="fabMain" type="button" aria-label="Menu">+</button>
-      </div>
     </section>
 
     <section class="view" id="view-penjualan">
@@ -456,9 +466,7 @@
         <h2>Penjualan</h2>
         <input type="text" id="penjualanCari" placeholder="Cari nama atau kode barang" autocomplete="off">
         <ul class="stok-list" id="penjualanHasilCari" style="display:none; margin-top:6px;"></ul>
-        <button class="secondary" id="btnScanJual" type="button">&#128247; Scan barcode</button>
         <p class="error" id="penjualanPesan"></p>
-        <button class="secondary" id="btnRiwayatNota" type="button">&#128203; Riwayat nota</button>
       </div>
       <div class="card">
         <h2>Keranjang</h2>
@@ -494,7 +502,6 @@
     <section class="view" id="view-riwayat">
       <div class="card">
         <h2>Riwayat nota</h2>
-        <button class="secondary" id="btnRiwayatKembali" type="button">&larr; Kembali ke penjualan</button>
         <ul class="stok-list" id="riwayatList" style="margin-top:10px;"></ul>
         <p class="empty" id="riwayatEmpty" style="display:none;">Belum ada nota.</p>
       </div>
@@ -502,8 +509,7 @@
 
     <section class="view" id="view-detail">
       <div class="card">
-        <button class="secondary" id="btnDetailBack" type="button">&larr; Kembali ke Stok</button>
-        <h2 id="detailNama" style="margin-top:14px;"></h2>
+        <h2 id="detailNama"></h2>
         <p class="kode" id="detailKode" style="font-family:monospace; color:var(--muted); font-size:12px; margin:0 0 8px;"></p>
         <div class="info-grid">
           <div><span class="info-label">Harga beli</span><span id="detailHargaBeli"></span></div>
@@ -563,6 +569,19 @@
     </section>
 
   </main>
+
+  <div class="fab-wrap" id="fabGlobal" style="display:none;">
+    <div class="fab-menu" id="fabMenu">
+      <button class="secondary" id="fabDaftarBaru" type="button" data-view="view-stok">+ Daftarkan barang baru</button>
+      <button class="secondary" id="fabAktifkanKamera" type="button" data-view="view-stok">&#128247; Aktifkan kamera</button>
+      <button class="secondary" id="fabScanJual" type="button" data-view="view-penjualan">&#128247; Scan barcode</button>
+      <button class="secondary" id="fabRiwayatNota" type="button" data-view="view-penjualan">&#128203; Riwayat nota</button>
+    </div>
+    <button class="fab-toggle" id="fabToggle" type="button" aria-label="Menu aksi" style="display:none;">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"></polyline></svg>
+    </button>
+    <button class="fab-home" id="fabHome" type="button" aria-label="Ke Home">&#127968;</button>
+  </div>
 
 </div>
 
@@ -673,6 +692,41 @@ let produkBaruTerakhir = null;
 function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  perbaruiFab(id);
+}
+
+// Induk tiap layar: tombol pojok kanan bawah selalu kembali ke induk layar yang sedang aktif.
+const INDUK_LAYAR = {
+  'view-stok': 'view-home',
+  'view-penjualan': 'view-home',
+  'view-detail': 'view-stok',
+  'view-riwayat': 'view-penjualan'
+};
+
+// Tumpukan tombol pojok kanan bawah: tombol kembali (🏠 kalau induknya Home, ← kalau layar lebih dalam).
+// Tombol ^ dan isi menunya menyesuaikan layar lewat atribut data-view di #fabMenu.
+function perbaruiFab(id) {
+  const menu = document.getElementById('fabMenu');
+  const toggle = document.getElementById('fabToggle');
+  menu.classList.remove('open');
+  toggle.classList.remove('open');
+  let jumlah = 0;
+  menu.querySelectorAll('button').forEach(b => {
+    const cocok = b.dataset.view === id;
+    b.style.display = cocok ? '' : 'none';
+    if (cocok) jumlah++;
+  });
+  toggle.style.display = jumlah > 0 ? '' : 'none';
+
+  const kembali = document.getElementById('fabHome');
+  if ((INDUK_LAYAR[id] || 'view-home') === 'view-home') {
+    kembali.innerHTML = '&#127968;';
+    kembali.setAttribute('aria-label', 'Ke Home');
+  } else {
+    kembali.innerHTML = '&larr;';
+    kembali.setAttribute('aria-label', 'Kembali');
+  }
+  document.getElementById('fabGlobal').style.display = id === 'view-home' ? 'none' : '';
 }
 
 async function checkSession() {
@@ -690,6 +744,13 @@ async function checkSession() {
 
 document.getElementById('btnHome').addEventListener('click', () => {
   showView('view-home');
+});
+
+document.getElementById('fabHome').addEventListener('click', () => {
+  const aktif = document.querySelector('.view.active').id;
+  const induk = INDUK_LAYAR[aktif] || 'view-home';
+  showView(induk);
+  if (induk === 'view-stok') loadStok();
 });
 
 document.getElementById('homeStok').addEventListener('click', () => {
@@ -847,8 +908,9 @@ async function onScanJual(decodedText) {
   await tambahKeKeranjang(p, parsed ? parsed.tanggalISO : null);
 }
 
-document.getElementById('btnScanJual').addEventListener('click', () => {
+document.getElementById('fabScanJual').addEventListener('click', () => {
   scanTujuan = 'jual';
+  tutupMenuFab();
   document.getElementById('modalKameraOverlay').style.display = 'flex';
 });
 
@@ -1125,12 +1187,9 @@ async function bukaDetailNota(n) {
   });
 }
 
-document.getElementById('btnRiwayatNota').addEventListener('click', () => {
+document.getElementById('fabRiwayatNota').addEventListener('click', () => {
   showView('view-riwayat');
   muatRiwayatNota();
-});
-document.getElementById('btnRiwayatKembali').addEventListener('click', () => {
-  showView('view-penjualan');
 });
 document.getElementById('btnDetailNotaTutup').addEventListener('click', () => {
   document.getElementById('modalDetailNotaOverlay').style.display = 'none';
@@ -1347,12 +1406,18 @@ document.getElementById('btnDaftarBaruDariStok').addEventListener('click', () =>
   bukaModalBarangBaru(document.getElementById('stokSearch').value.trim());
 });
 
-document.getElementById('fabMain').addEventListener('click', () => {
+document.getElementById('fabToggle').addEventListener('click', () => {
   document.getElementById('fabMenu').classList.toggle('open');
+  document.getElementById('fabToggle').classList.toggle('open');
 });
 
-document.getElementById('fabDaftarBaru').addEventListener('click', () => {
+function tutupMenuFab() {
   document.getElementById('fabMenu').classList.remove('open');
+  document.getElementById('fabToggle').classList.remove('open');
+}
+
+document.getElementById('fabDaftarBaru').addEventListener('click', () => {
+  tutupMenuFab();
   bukaModalBarangBaru('');
 });
 
@@ -1363,7 +1428,7 @@ let scanSedangDiproses = false;     // cegah hasil scan terbaca dobel
 
 document.getElementById('fabAktifkanKamera').addEventListener('click', () => {
   scanTujuan = 'stok';
-  document.getElementById('fabMenu').classList.remove('open');
+  tutupMenuFab();
   document.getElementById('modalKameraOverlay').style.display = 'flex';
 });
 
@@ -1706,10 +1771,6 @@ document.getElementById('btnPrintDetailBarcode').addEventListener('click', () =>
   w.document.write('<html><body style="text-align:center;font-family:sans-serif;padding-top:40px;">' + svg + '<p>' + label + '</p></body></html>');
   w.document.close();
   w.print();
-});
-
-document.getElementById('btnDetailBack').addEventListener('click', () => {
-  showView('view-stok');
 });
 
 let detailTransMatchedBatch = null;
