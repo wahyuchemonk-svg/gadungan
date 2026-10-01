@@ -235,6 +235,36 @@
     cursor: pointer;
     margin-top: 0;
   }
+  /* animasi tombol pojok kanan bawah */
+  .fab-home, .fab-toggle {
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0s linear 0s;
+  }
+  .fab-toggle { transition-delay: 0.06s, 0.06s, 0s; }
+  #fabGlobal.fab-sembunyi .fab-home,
+  #fabGlobal.fab-sembunyi .fab-toggle,
+  .fab-toggle.fab-sembunyi {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px) scale(0.8);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s linear 0.15s;
+  }
+  @keyframes fabIkonMasuk {
+    from { opacity: 0; transform: rotate(-60deg) scale(0.6); }
+    to { opacity: 1; transform: none; }
+  }
+  .fab-home svg { animation: fabIkonMasuk 0.22s ease; }
+  @keyframes fabMenuItemMasuk {
+    from { opacity: 0; transform: translateY(10px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+  .fab-menu.open button {
+    animation: fabMenuItemMasuk 0.18s ease backwards;
+    animation-delay: calc(var(--urut, 0) * 0.04s);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fab-home, .fab-toggle, .fab-toggle svg { transition: none !important; }
+    .fab-home svg, .fab-menu.open button { animation: none !important; }
+  }
   button.danger-solid {
     padding: 11px;
     border-radius: 8px;
@@ -378,7 +408,14 @@
   .home-item .home-soon { font-size: 10px; color: var(--muted); }
 
   .view { display: none; }
-  .view.active { display: block; }
+  @keyframes layarMasuk {
+    from { opacity: 0.35; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  .view.active { display: block; animation: layarMasuk 1s cubic-bezier(0.2, 0.7, 0.2, 1); }
+  @media (prefers-reduced-motion: reduce) {
+    .view.active { animation: none; }
+  }
   .badge { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #eef0e5; color: var(--success); margin-left: 6px; }
   .badge.warn { background: #f7e6e3; color: var(--danger); }
   #loginView { max-width: 340px; margin: 60px auto; padding: 0 16px; }
@@ -570,14 +607,14 @@
 
   </main>
 
-  <div class="fab-wrap" id="fabGlobal" style="display:none;">
+  <div class="fab-wrap fab-sembunyi" id="fabGlobal">
     <div class="fab-menu" id="fabMenu">
       <button class="secondary" id="fabDaftarBaru" type="button" data-view="view-stok">+ Daftarkan barang baru</button>
       <button class="secondary" id="fabAktifkanKamera" type="button" data-view="view-stok">&#128247; Aktifkan kamera</button>
       <button class="secondary" id="fabScanJual" type="button" data-view="view-penjualan">&#128247; Scan barcode</button>
       <button class="secondary" id="fabRiwayatNota" type="button" data-view="view-penjualan">&#128203; Riwayat nota</button>
     </div>
-    <button class="fab-toggle" id="fabToggle" type="button" aria-label="Menu aksi" style="display:none;">
+    <button class="fab-toggle fab-sembunyi" id="fabToggle" type="button" aria-label="Menu aksi">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"></polyline></svg>
     </button>
     <button class="fab-home" id="fabHome" type="button" aria-label="Ke Home">&#127968;</button>
@@ -695,6 +732,10 @@ function showView(id) {
   perbaruiFab(id);
 }
 
+// Ikon tombol pojok kanan bawah (gambar garis, serasi dengan tombol ^)
+const IKON_HOME = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12l9-9 9 9"></path><path d="M5 10v10h5v-6h4v6h5V10"></path></svg>';
+const IKON_KEMBALI = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 6 9 12 15 18"></polyline></svg>';
+
 // Induk tiap layar: tombol pojok kanan bawah selalu kembali ke induk layar yang sedang aktif.
 const INDUK_LAYAR = {
   'view-stok': 'view-home',
@@ -703,30 +744,32 @@ const INDUK_LAYAR = {
   'view-riwayat': 'view-penjualan'
 };
 
-// Tumpukan tombol pojok kanan bawah: tombol kembali (🏠 kalau induknya Home, ← kalau layar lebih dalam).
+// Tumpukan tombol pojok kanan bawah: tombol kembali (ikon rumah kalau induknya Home, chevron kiri kalau layar lebih dalam).
 // Tombol ^ dan isi menunya menyesuaikan layar lewat atribut data-view di #fabMenu.
 function perbaruiFab(id) {
   const menu = document.getElementById('fabMenu');
   const toggle = document.getElementById('fabToggle');
   menu.classList.remove('open');
   toggle.classList.remove('open');
-  let jumlah = 0;
+
+  const milikLayarIni = [];
   menu.querySelectorAll('button').forEach(b => {
     const cocok = b.dataset.view === id;
     b.style.display = cocok ? '' : 'none';
-    if (cocok) jumlah++;
+    if (cocok) milikLayarIni.push(b);
   });
-  toggle.style.display = jumlah > 0 ? '' : 'none';
+  // urutan muncul menu: item paling dekat tombol ^ (paling bawah) muncul duluan
+  milikLayarIni.forEach((b, i) => b.style.setProperty('--urut', milikLayarIni.length - 1 - i));
+  toggle.classList.toggle('fab-sembunyi', milikLayarIni.length === 0);
 
   const kembali = document.getElementById('fabHome');
-  if ((INDUK_LAYAR[id] || 'view-home') === 'view-home') {
-    kembali.innerHTML = '&#127968;';
-    kembali.setAttribute('aria-label', 'Ke Home');
-  } else {
-    kembali.innerHTML = '&larr;';
-    kembali.setAttribute('aria-label', 'Kembali');
+  const mode = (INDUK_LAYAR[id] || 'view-home') === 'view-home' ? 'home' : 'kembali';
+  if (kembali.dataset.mode !== mode) {   // ikon hanya diganti kalau memang berubah, supaya animasinya tidak terulang
+    kembali.dataset.mode = mode;
+    kembali.innerHTML = mode === 'home' ? IKON_HOME : IKON_KEMBALI;
+    kembali.setAttribute('aria-label', mode === 'home' ? 'Ke Home' : 'Kembali');
   }
-  document.getElementById('fabGlobal').style.display = id === 'view-home' ? 'none' : '';
+  document.getElementById('fabGlobal').classList.toggle('fab-sembunyi', id === 'view-home');
 }
 
 async function checkSession() {
