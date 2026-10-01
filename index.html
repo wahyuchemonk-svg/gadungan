@@ -286,6 +286,20 @@
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
   .error { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+  button.memuat { opacity: 0.75; cursor: wait; }
+  button.memuat::before {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
+    vertical-align: -2px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: putar 0.7s linear infinite;
+  }
+  @keyframes putar { to { transform: rotate(360deg); } }
   .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
   #readerStok { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 12px; }
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin: 10px 0 14px; padding-top: 10px; border-top: 1px solid var(--border); }
@@ -1317,6 +1331,7 @@ document.getElementById('btnStrukTutup').addEventListener('click', () => {
 });
 
 document.getElementById('btnLogin').addEventListener('click', async () => {
+  const btn = document.getElementById('btnLogin');
   const email = document.getElementById('loginEmail').value.trim();
   const pass = document.getElementById('loginPass').value;
   const err = document.getElementById('loginError');
@@ -1326,13 +1341,26 @@ document.getElementById('btnLogin').addEventListener('click', async () => {
     err.style.display = 'block';
     return;
   }
-  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) {
-    err.textContent = 'Email atau password salah';
-    err.style.display = 'block';
-    return;
+
+  // tanda sedang memproses: tombol dikunci supaya tidak terkirim dobel
+  btn.disabled = true;
+  btn.classList.add('memuat');
+  btn.textContent = 'Memproses...';
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) {
+      err.textContent = (error.name === 'AuthRetryableFetchError' || !navigator.onLine)
+        ? 'Tidak bisa terhubung. Cek koneksi internet lalu coba lagi.'
+        : 'Email atau password salah';
+      err.style.display = 'block';
+      return;
+    }
+    await checkSession();
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('memuat');
+    btn.textContent = 'Masuk';
   }
-  checkSession();
 });
 
 ['loginEmail', 'loginPass'].forEach(id => {
