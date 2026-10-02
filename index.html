@@ -9,6 +9,7 @@
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MADOKU">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -471,11 +472,10 @@
             <span class="home-icon">&#129534;</span>
             <span class="home-label">Penjualan</span>
           </button>
-          <div class="home-item disabled">
+          <button class="home-item" id="homeLaporan" type="button">
             <span class="home-icon">&#128202;</span>
             <span class="home-label">Laporan</span>
-            <span class="home-soon">Segera hadir</span>
-          </div>
+          </button>
           <div class="home-item disabled">
             <span class="home-icon">&#128666;</span>
             <span class="home-label">Supplier</span>
@@ -507,7 +507,7 @@
           <option value="terbaru">Terbaru ditambah</option>
         </select>
         <ul class="stok-list" id="stokList"></ul>
-        <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Tambah lewat tab "Buat kode".</p>
+        <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Buka tombol ^ di pojok kanan bawah, lalu pilih "Daftarkan barang baru".</p>
         <button class="secondary" id="btnDaftarBaruDariStok" type="button" style="display:none;">+ Daftarkan sebagai barang baru</button>
       </div>
     </section>
@@ -555,6 +555,40 @@
         <h2>Riwayat nota</h2>
         <ul class="stok-list" id="riwayatList" style="margin-top:10px;"></ul>
         <p class="empty" id="riwayatEmpty" style="display:none;">Belum ada nota.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-laporan">
+      <div class="card">
+        <h2>Laporan</h2>
+        <label for="laporanPeriode">Periode</label>
+        <select id="laporanPeriode">
+          <option value="hari">Hari ini</option>
+          <option value="minggu">7 hari terakhir</option>
+          <option value="bulan">Bulan ini</option>
+          <option value="custom">Pilih tanggal sendiri</option>
+        </select>
+        <div id="laporanTanggalBebas" style="display:none;">
+          <label for="laporanDari">Dari tanggal</label>
+          <input type="date" id="laporanDari">
+          <label for="laporanSampai">Sampai tanggal</label>
+          <input type="date" id="laporanSampai">
+        </div>
+        <p class="hint" id="laporanRentang"></p>
+        <p class="error" id="laporanError"></p>
+        <div class="info-grid">
+          <div><span class="info-label">Omzet</span><span id="laporanOmzet">-</span></div>
+          <div><span class="info-label">Laba</span><span id="laporanLaba">-</span></div>
+          <div><span class="info-label">Jumlah nota</span><span id="laporanNota">-</span></div>
+          <div><span class="info-label">Barang terjual</span><span id="laporanBarang">-</span></div>
+        </div>
+        <label>Barang terlaris</label>
+        <ul class="stok-list" id="laporanTerlaris"></ul>
+        <p class="empty" id="laporanTerlarisEmpty" style="display:none;">Belum ada penjualan di periode ini.</p>
+        <label>Stok paling lama mengendap</label>
+        <p class="hint">Kondisi stok saat ini, tidak terpengaruh pilihan periode.</p>
+        <ul class="stok-list" id="laporanMengendap"></ul>
+        <p class="empty" id="laporanMengendapEmpty" style="display:none;">Tidak ada stok tersisa.</p>
       </div>
     </section>
 
@@ -754,6 +788,7 @@ const IKON_KEMBALI = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none
 const INDUK_LAYAR = {
   'view-stok': 'view-home',
   'view-penjualan': 'view-home',
+  'view-laporan': 'view-home',
   'view-detail': 'view-stok',
   'view-riwayat': 'view-penjualan'
 };
@@ -819,6 +854,198 @@ document.getElementById('homePenjualan').addEventListener('click', () => {
   showView('view-penjualan');
   loadStok();
 });
+
+document.getElementById('homeLaporan').addEventListener('click', () => {
+  showView('view-laporan');
+  muatLaporan();
+  muatMengendap();
+});
+
+// ===== Laporan =====
+let laporanToken = 0;
+
+function isoDariTanggal(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function rentangLaporan(periode) {
+  const now = new Date();
+  const akhir = isoDariTanggal(now);
+  let mulai = akhir;
+  if (periode === 'minggu') {
+    mulai = isoDariTanggal(new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6));
+  } else if (periode === 'bulan') {
+    mulai = isoDariTanggal(new Date(now.getFullYear(), now.getMonth(), 1));
+  } else if (periode === 'custom') {
+    return {
+      mulai: document.getElementById('laporanDari').value,
+      akhir: document.getElementById('laporanSampai').value
+    };
+  }
+  return { mulai, akhir };
+}
+
+// Supabase membatasi 1000 baris per permintaan, jadi ambil bertahap sampai habis.
+async function ambilSemuaBaris(buatQuery) {
+  const ukuran = 1000;
+  let semua = [];
+  for (let dari = 0; ; dari += ukuran) {
+    const { data, error } = await buatQuery().range(dari, dari + ukuran - 1);
+    if (error) throw error;
+    semua = semua.concat(data || []);
+    if (!data || data.length < ukuran) break;
+  }
+  return semua;
+}
+
+async function muatLaporan() {
+  const token = ++laporanToken;
+  const periode = document.getElementById('laporanPeriode').value;
+  const { mulai, akhir } = rentangLaporan(periode);
+  const errEl = document.getElementById('laporanError');
+  errEl.textContent = '';
+  errEl.style.display = 'none';
+  renderTerlaris(null);
+  document.getElementById('laporanTanggalBebas').style.display = periode === 'custom' ? 'block' : 'none';
+  if (periode === 'custom' && (!mulai || !akhir || mulai > akhir)) {
+    ['laporanOmzet', 'laporanLaba', 'laporanNota', 'laporanBarang'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+    document.getElementById('laporanRentang').textContent = '';
+    errEl.textContent = (!mulai || !akhir)
+      ? 'Isi tanggal "Dari" dan "Sampai".'
+      : 'Tanggal "Dari" tidak boleh setelah "Sampai".';
+    errEl.style.display = 'block';
+    return;
+  }
+  document.getElementById('laporanRentang').textContent =
+    mulai === akhir ? tanggalIndo(mulai) : tanggalIndo(mulai) + ' s/d ' + tanggalIndo(akhir);
+  ['laporanOmzet', 'laporanLaba', 'laporanNota', 'laporanBarang'].forEach(id => {
+    document.getElementById(id).textContent = '...';
+  });
+
+  try {
+    const notas = await ambilSemuaBaris(() => sb
+      .from('gudang_penjualan')
+      .select('id, total')
+      .gte('tanggal', mulai).lte('tanggal', akhir)
+      .order('id'));
+    const items = await ambilSemuaBaris(() => sb
+      .from('gudang_penjualan_item')
+      .select('id, kode_barang, nama_barang, jumlah, harga_satuan, harga_beli_saat_itu, gudang_penjualan!inner(tanggal)')
+      .gte('gudang_penjualan.tanggal', mulai).lte('gudang_penjualan.tanggal', akhir)
+      .order('id'));
+    if (token !== laporanToken) return;   // periode sudah diganti, abaikan hasil lama
+
+    const omzet = notas.reduce((s, n) => s + Number(n.total || 0), 0);
+    const laba = items.reduce((s, it) =>
+      s + (Number(it.harga_satuan || 0) - Number(it.harga_beli_saat_itu || 0)) * Number(it.jumlah || 0), 0);
+    const barang = items.reduce((s, it) => s + Number(it.jumlah || 0), 0);
+
+    document.getElementById('laporanOmzet').textContent = formatRupiah(omzet);
+    document.getElementById('laporanLaba').textContent = formatRupiah(laba);
+    document.getElementById('laporanNota').textContent = notas.length;
+    document.getElementById('laporanBarang').textContent = barang;
+    renderTerlaris(items);
+  } catch (e) {
+    if (token !== laporanToken) return;
+    ['laporanOmzet', 'laporanLaba', 'laporanNota', 'laporanBarang'].forEach(id => {
+      document.getElementById(id).textContent = '-';
+    });
+    errEl.textContent = 'Gagal memuat laporan. Cek koneksi lalu coba lagi.';
+    errEl.style.display = 'block';
+  }
+}
+
+document.getElementById('laporanPeriode').addEventListener('change', () => {
+  if (document.getElementById('laporanPeriode').value === 'custom') {
+    const hariIni = isoDariTanggal(new Date());
+    if (!document.getElementById('laporanDari').value) document.getElementById('laporanDari').value = hariIni;
+    if (!document.getElementById('laporanSampai').value) document.getElementById('laporanSampai').value = hariIni;
+  }
+  muatLaporan();
+});
+document.getElementById('laporanDari').addEventListener('change', muatLaporan);
+document.getElementById('laporanSampai').addEventListener('change', muatLaporan);
+
+// 10 batch yang paling lama masih tersisa di gudang (urut tanggal masuk tertua).
+async function muatMengendap() {
+  const list = document.getElementById('laporanMengendap');
+  const empty = document.getElementById('laporanMengendapEmpty');
+  list.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  empty.style.display = 'none';
+
+  const { data, error } = await sb
+    .from('gudang_batch')
+    .select('id, tanggal_masuk, sisa, gudang_produk(nama_barang, kode_barang)')
+    .gt('sisa', 0)
+    .order('tanggal_masuk', { ascending: true })
+    .limit(10);
+
+  list.innerHTML = '';
+  if (error) {
+    list.innerHTML = '<li><span class="hint">Gagal memuat stok.</span></li>';
+    return;
+  }
+  if (!data || data.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  data.forEach(b => {
+    const p = Array.isArray(b.gudang_produk) ? b.gudang_produk[0] : b.gudang_produk;
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="nama">${escapeHtml(p ? p.nama_barang : '(barang dihapus)')}</div>
+        <div class="kode">${escapeHtml(p ? p.kode_barang : '')} &middot; masuk ${tanggalIndo(b.tanggal_masuk)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:600;">Sisa ${b.sisa}</div>
+        <div class="kode">${usiaBarang(b.tanggal_masuk)}</div>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+// Daftar barang terlaris (10 teratas, urut jumlah terjual). items = null berarti kosongkan daftar.
+function renderTerlaris(items) {
+  const list = document.getElementById('laporanTerlaris');
+  const empty = document.getElementById('laporanTerlarisEmpty');
+  list.innerHTML = '';
+  empty.style.display = 'none';
+  if (!items) return;
+  if (items.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+
+  const peta = {};
+  items.forEach(it => {
+    const kunci = it.kode_barang || it.nama_barang;
+    if (!peta[kunci]) peta[kunci] = { kode: it.kode_barang, nama: it.nama_barang, jumlah: 0, omzet: 0 };
+    peta[kunci].jumlah += Number(it.jumlah || 0);
+    peta[kunci].omzet += Number(it.jumlah || 0) * Number(it.harga_satuan || 0);
+  });
+  const urut = Object.values(peta)
+    .sort((a, b) => b.jumlah - a.jumlah || b.omzet - a.omzet)
+    .slice(0, 10);
+
+  urut.forEach((b, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="nama">${i + 1}. ${escapeHtml(b.nama)}</div>
+        <div class="kode">${escapeHtml(b.kode)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:600;">${b.jumlah} terjual</div>
+        <div class="kode">${formatRupiah(b.omzet)}</div>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
 
 // ===== Keranjang penjualan =====
 let keranjang = [];
@@ -1428,7 +1655,7 @@ function renderStok() {
   if (filtered.length === 0) {
     empty.textContent = term
       ? 'Tidak ada barang yang cocok.'
-      : 'Belum ada barang. Tambah lewat tab "Buat kode".';
+      : 'Belum ada barang. Buka tombol ^ di pojok kanan bawah, lalu pilih "Daftarkan barang baru".';
     empty.style.display = 'block';
     btnDaftarBaru.style.display = term ? 'block' : 'none';
     return;
