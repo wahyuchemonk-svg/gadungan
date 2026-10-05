@@ -333,6 +333,28 @@
   .foto-count-badge { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #eaf3fb; color: #2471a3; vertical-align: middle; white-space: nowrap; }
   .stok-right { display: flex; align-items: center; gap: 8px; }
   .chevron { color: var(--muted); font-size: 18px; line-height: 1; }
+  .stok-list li.stok-kartu {
+    justify-content: flex-start;
+    gap: 10px;
+    margin: 0 0 8px;
+    padding: 10px 12px 10px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .stok-list li.stok-kartu:last-child { border-bottom: 1px solid var(--border); margin-bottom: 0; }
+  .stok-kartu .garis { width: 4px; align-self: stretch; border-radius: 2px; flex-shrink: 0; background: #639922; }
+  .stok-kartu .garis.menipis { background: #BA7517; }
+  .stok-kartu .garis.habis { background: #E24B4A; }
+  .stok-kartu .foto { width: 48px; height: 48px; border-radius: 8px; background: #e9e4d6; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+  .stok-kartu .foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .stok-kartu .info { flex: 1; min-width: 0; }
+  .stok-kartu .harga { font-size: 12px; margin-top: 2px; }
+  .stok-kartu .stok-angka { text-align: right; flex-shrink: 0; }
+  .stok-kartu .stok-angka .sisa { font-size: 17px; line-height: 1.1; }
+  .stok-kartu .stok-angka .ket { font-size: 11px; color: var(--muted); }
+  .stok-kartu .stok-angka.menipis .sisa, .stok-kartu .stok-angka.menipis .ket { color: #854F0B; }
+  .stok-kartu .stok-angka.habis .sisa, .stok-kartu .stok-angka.habis .ket { color: #A32D2D; }
   .cart-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
   .cart-item:last-child { border-bottom: none; }
   .cart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -455,7 +477,7 @@
   <header>
     <button id="btnHome" type="button" style="width:auto; padding:6px 10px; margin-right:8px;">&#127968;</button>
     <h1>Gadungan</h1>
-    <button id="btnLogout">Keluar</button>
+    <span style="width:46px;"></span>
   </header>
 
   <main>
@@ -480,16 +502,10 @@
             <span class="home-icon">&#128666;</span>
             <span class="home-label">Supplier</span>
           </button>
-          <div class="home-item disabled">
-            <span class="home-icon">&#127991;&#65039;</span>
-            <span class="home-label">Kategori Barang</span>
-            <span class="home-soon">Segera hadir</span>
-          </div>
-          <div class="home-item disabled">
+          <button class="home-item" id="homePengaturan" type="button">
             <span class="home-icon">&#9881;&#65039;</span>
             <span class="home-label">Pengaturan</span>
-            <span class="home-soon">Segera hadir</span>
-          </div>
+          </button>
         </div>
       </div>
     </section>
@@ -580,6 +596,14 @@
         <p class="empty" id="supplierDetailBarangEmpty" style="display:none;">Belum ada barang masuk yang dicatat dari supplier ini.</p>
         <label>Riwayat pembelian</label>
         <ul class="stok-list" id="supplierDetailRiwayat"></ul>
+      </div>
+    </section>
+
+    <section class="view" id="view-pengaturan">
+      <div class="card">
+        <h2>Pengaturan</h2>
+        <label>Akun</label>
+        <button class="danger" id="btnLogout" type="button">Keluar dari akun</button>
       </div>
     </section>
 
@@ -845,6 +869,7 @@ const INDUK_LAYAR = {
   'view-laporan': 'view-home',
   'view-supplier': 'view-home',
   'view-supplier-detail': 'view-supplier',
+  'view-pengaturan': 'view-home',
   'view-detail': 'view-stok',
   'view-riwayat': 'view-penjualan'
 };
@@ -918,8 +943,13 @@ document.getElementById('homeLaporan').addEventListener('click', () => {
   muatMengendap();
 });
 
+document.getElementById('homePengaturan').addEventListener('click', () => {
+  showView('view-pengaturan');
+});
+
 // ===== Supplier =====
-let supplierEditId = null;     // null = sedang menambah supplier baru
+let supplierEditId = null;
+// null = sedang menambah supplier baru
 let supplierEditNama = '';
 
 document.getElementById('homeSupplier').addEventListener('click', () => {
@@ -2004,20 +2034,25 @@ function renderStok() {
   btnDaftarBaru.style.display = 'none';
   filtered.forEach(p => {
     const li = document.createElement('li');
-    li.className = 'clickable';
-    const low = Number(p.sisa_stok) <= 3;
-    const jumlahFoto = (p.foto_paths || []).length;
-    const fotoBadge = jumlahFoto === 0
-      ? ' <span class="no-foto-badge">Belum ada foto</span>'
-      : ` <span class="foto-count-badge">&#128247; ${jumlahFoto}</span>`;
+    li.className = 'clickable stok-kartu';
+    const sisa = Number(p.sisa_stok);
+    const status = sisa <= 0 ? 'habis' : (sisa <= 3 ? 'menipis' : 'aman');
+    const ket = status === 'aman' ? 'stok' : status;
+    const fotoPertama = (p.foto_paths || [])[0];
+    const fotoHtml = fotoPertama
+      ? `<img src="${escapeHtml(fotoPublicUrl(fotoPertama))}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='&#128247;'">`
+      : '&#128247;';
     li.innerHTML = `
-      <div>
-        <div class="nama">${escapeHtml(p.nama_barang)}${fotoBadge}</div>
+      <div class="garis ${status}"></div>
+      <div class="foto">${fotoHtml}</div>
+      <div class="info">
+        <div class="nama">${escapeHtml(p.nama_barang)}</div>
         <div class="kode">${escapeHtml(p.kode_barang)}</div>
+        <div class="harga">${formatRupiah(Number(p.harga_jual || 0))}</div>
       </div>
-      <div class="stok-right">
-        <div class="sisa ${low ? 'low' : ''}">${p.sisa_stok}</div>
-        <span class="chevron">&#8250;</span>
+      <div class="stok-angka ${status}">
+        <div class="sisa">${p.sisa_stok}</div>
+        <div class="ket">${ket}</div>
       </div>
     `;
     li.addEventListener('click', () => openDetail(p));
