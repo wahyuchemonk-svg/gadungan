@@ -476,11 +476,10 @@
             <span class="home-icon">&#128202;</span>
             <span class="home-label">Laporan</span>
           </button>
-          <div class="home-item disabled">
+          <button class="home-item" id="homeSupplier" type="button">
             <span class="home-icon">&#128666;</span>
             <span class="home-label">Supplier</span>
-            <span class="home-soon">Segera hadir</span>
-          </div>
+          </button>
           <div class="home-item disabled">
             <span class="home-icon">&#127991;&#65039;</span>
             <span class="home-label">Kategori Barang</span>
@@ -558,6 +557,32 @@
       </div>
     </section>
 
+    <section class="view" id="view-supplier">
+      <div class="card">
+        <h2>Supplier</h2>
+        <ul class="stok-list" id="supplierList" style="margin-top:10px;"></ul>
+        <p class="empty" id="supplierEmpty" style="display:none;">Belum ada supplier. Buka tombol ^ di pojok kanan bawah, lalu pilih "Tambah supplier".</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-supplier-detail">
+      <div class="card">
+        <h2 id="supplierDetailNama"></h2>
+        <div class="info-grid">
+          <div><span class="info-label">Telepon</span><span id="supplierDetailTelepon">-</span></div>
+          <div><span class="info-label">Alamat</span><span id="supplierDetailAlamat">-</span></div>
+          <div><span class="info-label">Catatan</span><span id="supplierDetailCatatan">-</span></div>
+        </div>
+        <button class="primary" id="btnSupplierWA" type="button" style="display:none;">Hubungi lewat WhatsApp</button>
+        <button class="secondary" id="btnSupplierUbah" type="button">Ubah data supplier</button>
+        <label>Barang yang pernah dibeli</label>
+        <ul class="stok-list" id="supplierDetailBarang"></ul>
+        <p class="empty" id="supplierDetailBarangEmpty" style="display:none;">Belum ada barang masuk yang dicatat dari supplier ini.</p>
+        <label>Riwayat pembelian</label>
+        <ul class="stok-list" id="supplierDetailRiwayat"></ul>
+      </div>
+    </section>
+
     <section class="view" id="view-laporan">
       <div class="card">
         <h2>Laporan</h2>
@@ -615,8 +640,12 @@
           <label for="detailTransJumlah">Jumlah</label>
           <input type="number" id="detailTransJumlah" min="1" value="1">
           <div id="detailTransMasukWrap">
-            <label for="detailTransAsal">Asal barang (opsional)</label>
-            <input type="text" id="detailTransAsal" placeholder="Contoh: Toko Maju Jaya">
+            <label for="detailTransSupplier">Supplier (opsional)</label>
+            <select id="detailTransSupplier"></select>
+            <div id="detailTransAsalWrap">
+              <label for="detailTransAsal">Asal barang (opsional)</label>
+              <input type="text" id="detailTransAsal" placeholder="Contoh: Toko Maju Jaya">
+            </div>
             <label for="detailTransHargaBeli">Harga beli saat ini</label>
             <input type="number" id="detailTransHargaBeli" min="0">
             <label for="detailTransTanggalMasuk">Tanggal masuk</label>
@@ -661,6 +690,7 @@
       <button class="secondary" id="fabAktifkanKamera" type="button" data-view="view-stok">&#128247; Aktifkan kamera</button>
       <button class="secondary" id="fabScanJual" type="button" data-view="view-penjualan">&#128247; Scan barcode</button>
       <button class="secondary" id="fabRiwayatNota" type="button" data-view="view-penjualan">&#128203; Riwayat nota</button>
+      <button class="secondary" id="fabTambahSupplier" type="button" data-view="view-supplier">+ Tambah supplier</button>
     </div>
     <button class="fab-toggle fab-sembunyi" id="fabToggle" type="button" aria-label="Menu aksi">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"></polyline></svg>
@@ -668,6 +698,26 @@
     <button class="fab-home" id="fabHome" type="button" aria-label="Ke Home">&#127968;</button>
   </div>
 
+</div>
+
+<div class="modal-overlay" id="modalSupplierOverlay">
+  <div class="modal-card form-modal">
+    <h3 id="modalSupplierJudul">Tambah supplier</h3>
+    <label for="supplierNama">Nama supplier</label>
+    <input type="text" id="supplierNama" placeholder="Contoh: Toko Maju Jaya">
+    <label for="supplierTelepon">Nomor WhatsApp/telepon (opsional)</label>
+    <input type="tel" id="supplierTelepon" placeholder="Contoh: 0812-3456-7890">
+    <label for="supplierAlamat">Alamat (opsional)</label>
+    <input type="text" id="supplierAlamat">
+    <label for="supplierCatatan">Catatan (opsional)</label>
+    <input type="text" id="supplierCatatan" placeholder="Contoh: datang tiap Senin, minimal order 1 dus">
+    <p class="error" id="supplierError" style="display:none;"></p>
+    <button class="danger" id="btnSupplierHapus" type="button" style="display:none;">Hapus supplier ini</button>
+    <div class="modal-actions">
+      <button class="secondary" id="btnSupplierBatal" type="button">Batal</button>
+      <button class="primary" id="btnSupplierSimpan" type="button">Simpan</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="confirmOverlay">
@@ -699,8 +749,12 @@
     <input type="number" id="modalBaruJumlahAwal" min="1" value="1">
     <label for="modalBaruTanggalMasuk">Tanggal masuk</label>
     <input type="date" id="modalBaruTanggalMasuk">
-    <label for="modalBaruAsal">Asal barang (opsional)</label>
-    <input type="text" id="modalBaruAsal" placeholder="Contoh: Toko Maju Jaya">
+    <label for="modalBaruSupplier">Supplier (opsional)</label>
+    <select id="modalBaruSupplier"></select>
+    <div id="modalBaruAsalWrap">
+      <label for="modalBaruAsal">Asal barang (opsional)</label>
+      <input type="text" id="modalBaruAsal" placeholder="Contoh: Toko Maju Jaya">
+    </div>
     <p class="error" id="modalBaruError" style="display:none;"></p>
     <div class="modal-actions">
       <button class="secondary" id="btnModalBaruBatal" type="button">Batal</button>
@@ -789,6 +843,8 @@ const INDUK_LAYAR = {
   'view-stok': 'view-home',
   'view-penjualan': 'view-home',
   'view-laporan': 'view-home',
+  'view-supplier': 'view-home',
+  'view-supplier-detail': 'view-supplier',
   'view-detail': 'view-stok',
   'view-riwayat': 'view-penjualan'
 };
@@ -843,6 +899,7 @@ document.getElementById('fabHome').addEventListener('click', () => {
   const induk = INDUK_LAYAR[aktif] || 'view-home';
   showView(induk);
   if (induk === 'view-stok') loadStok();
+  if (induk === 'view-supplier') muatSupplier();
 });
 
 document.getElementById('homeStok').addEventListener('click', () => {
@@ -859,6 +916,289 @@ document.getElementById('homeLaporan').addEventListener('click', () => {
   showView('view-laporan');
   muatLaporan();
   muatMengendap();
+});
+
+// ===== Supplier =====
+let supplierEditId = null;     // null = sedang menambah supplier baru
+let supplierEditNama = '';
+
+document.getElementById('homeSupplier').addEventListener('click', () => {
+  showView('view-supplier');
+  muatSupplier();
+});
+
+document.getElementById('fabTambahSupplier').addEventListener('click', () => {
+  tutupMenuFab();
+  bukaModalSupplier(null);
+});
+
+async function muatSupplier() {
+  const list = document.getElementById('supplierList');
+  const empty = document.getElementById('supplierEmpty');
+  list.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  empty.style.display = 'none';
+
+  const { data, error } = await sb
+    .from('gudang_supplier')
+    .select('id, nama, telepon, alamat, catatan')
+    .order('nama', { ascending: true });
+
+  list.innerHTML = '';
+  if (error) {
+    list.innerHTML = '<li><span class="hint">Gagal memuat supplier.</span></li>';
+    return;
+  }
+  if (!data || data.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  data.forEach(s => {
+    const li = document.createElement('li');
+    li.className = 'clickable';
+    li.innerHTML = `
+      <div>
+        <div class="nama">${escapeHtml(s.nama)}</div>
+        <div class="kode">${s.telepon ? escapeHtml(s.telepon) : 'Belum ada nomor'}</div>
+      </div>
+    `;
+    li.addEventListener('click', () => bukaDetailSupplier(s));
+    list.appendChild(li);
+  });
+}
+
+function bukaModalSupplier(s) {
+  supplierEditId = s ? s.id : null;
+  supplierEditNama = s ? s.nama : '';
+  document.getElementById('modalSupplierJudul').textContent = s ? 'Ubah supplier' : 'Tambah supplier';
+  document.getElementById('supplierNama').value = s ? s.nama : '';
+  document.getElementById('supplierTelepon').value = s && s.telepon ? s.telepon : '';
+  document.getElementById('supplierAlamat').value = s && s.alamat ? s.alamat : '';
+  document.getElementById('supplierCatatan').value = s && s.catatan ? s.catatan : '';
+  document.getElementById('supplierError').style.display = 'none';
+  document.getElementById('btnSupplierHapus').style.display = s ? 'block' : 'none';
+  document.getElementById('modalSupplierOverlay').style.display = 'flex';
+}
+
+document.getElementById('btnSupplierBatal').addEventListener('click', () => {
+  document.getElementById('modalSupplierOverlay').style.display = 'none';
+});
+
+document.getElementById('btnSupplierSimpan').addEventListener('click', async () => {
+  const err = document.getElementById('supplierError');
+  const btn = document.getElementById('btnSupplierSimpan');
+  err.style.display = 'none';
+
+  const nama = document.getElementById('supplierNama').value.trim();
+  if (!nama) {
+    err.textContent = 'Nama supplier wajib diisi.';
+    err.style.display = 'block';
+    return;
+  }
+  const isi = {
+    nama,
+    telepon: document.getElementById('supplierTelepon').value.trim() || null,
+    alamat: document.getElementById('supplierAlamat').value.trim() || null,
+    catatan: document.getElementById('supplierCatatan').value.trim() || null
+  };
+
+  btn.disabled = true;   // cegah terkirim dobel
+  const { error } = supplierEditId
+    ? await sb.from('gudang_supplier').update(isi).eq('id', supplierEditId)
+    : await sb.from('gudang_supplier').insert(isi);
+  btn.disabled = false;
+
+  if (error) {
+    err.textContent = 'Gagal menyimpan. Cek koneksi lalu coba lagi.';
+    err.style.display = 'block';
+    return;
+  }
+  document.getElementById('modalSupplierOverlay').style.display = 'none';
+  muatSupplier();
+  if (supplierEditId && supplierDetailAktif && supplierDetailAktif.id === supplierEditId) {
+    bukaDetailSupplier({ id: supplierEditId, ...isi });   // segarkan layar detail dengan data terbaru
+  }
+});
+
+document.getElementById('btnSupplierHapus').addEventListener('click', async () => {
+  const err = document.getElementById('supplierError');
+  err.style.display = 'none';
+  const konfirmasi = await tampilkanKonfirmasi(
+    `Hapus supplier "${supplierEditNama}"? Riwayat barang masuk yang pernah tercatat dari supplier ini tetap tersimpan.`
+  );
+  if (!konfirmasi) return;
+
+  const { error } = await sb.from('gudang_supplier').delete().eq('id', supplierEditId);
+  if (error) {
+    err.textContent = 'Gagal menghapus. Cek koneksi lalu coba lagi.';
+    err.style.display = 'block';
+    return;
+  }
+  document.getElementById('modalSupplierOverlay').style.display = 'none';
+  muatSupplier();
+  if (supplierDetailAktif && supplierDetailAktif.id === supplierEditId) {
+    supplierDetailAktif = null;
+    showView('view-supplier');   // supplier yang sedang dibuka dihapus, kembali ke daftar
+  }
+});
+
+let supplierDetailAktif = null;   // supplier yang sedang dibuka di layar detail
+
+async function bukaDetailSupplier(s) {
+  supplierDetailAktif = s;
+  document.getElementById('supplierDetailNama').textContent = s.nama;
+  document.getElementById('supplierDetailTelepon').textContent = s.telepon || '-';
+  document.getElementById('supplierDetailAlamat').textContent = s.alamat || '-';
+  document.getElementById('supplierDetailCatatan').textContent = s.catatan || '-';
+  document.getElementById('btnSupplierWA').style.display = nomorWhatsApp(s.telepon) ? 'block' : 'none';
+  showView('view-supplier-detail');
+  await muatRiwayatSupplier(s.id);
+}
+
+// Ubah nomor yang diketik (0812-3456-7890, +62 812..., 812...) jadi format internasional untuk wa.me.
+// Hasil kosong berarti nomor tidak bisa dipakai.
+function nomorWhatsApp(teks) {
+  if (!teks) return '';
+  let n = String(teks).replace(/\D/g, '');           // buang semua selain angka
+  if (n.startsWith('00')) n = n.slice(2);            // 0062... -> 62...
+  else if (n.startsWith('0')) n = '62' + n.slice(1); // 0812... -> 62812...
+  else if (n.startsWith('8')) n = '62' + n;          // 812... -> 62812...
+  return n.length >= 9 && n.length <= 15 ? n : '';
+}
+
+document.getElementById('btnSupplierWA').addEventListener('click', () => {
+  const nomor = supplierDetailAktif ? nomorWhatsApp(supplierDetailAktif.telepon) : '';
+  if (nomor) window.open('https://wa.me/' + nomor, '_blank', 'noopener');
+});
+
+document.getElementById('btnSupplierUbah').addEventListener('click', () => {
+  if (supplierDetailAktif) bukaModalSupplier(supplierDetailAktif);
+});
+
+async function muatRiwayatSupplier(supplierId) {
+  const listBarang = document.getElementById('supplierDetailBarang');
+  const emptyBarang = document.getElementById('supplierDetailBarangEmpty');
+  const listRiwayat = document.getElementById('supplierDetailRiwayat');
+  listBarang.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  listRiwayat.innerHTML = '';
+  emptyBarang.style.display = 'none';
+
+  let baris;
+  try {
+    baris = await ambilSemuaBaris(() => sb
+      .from('gudang_mutasi_stok')
+      .select('id, tanggal, created_at, jumlah, harga_beli_saat_itu, produk_id, gudang_produk(nama_barang, kode_barang), gudang_batch(tanggal_masuk)')
+      .eq('supplier_id', supplierId)
+      .eq('jenis', 'masuk')
+      .order('id'));
+  } catch (e) {
+    if (!supplierDetailAktif || supplierDetailAktif.id !== supplierId) return;
+    listBarang.innerHTML = '<li><span class="hint">Gagal memuat riwayat.</span></li>';
+    return;
+  }
+  if (!supplierDetailAktif || supplierDetailAktif.id !== supplierId) return;   // sudah pindah layar/supplier
+
+  const satu = x => Array.isArray(x) ? x[0] : x;
+  const entri = baris.map(b => {
+    const p = satu(b.gudang_produk) || {};
+    const bt = satu(b.gudang_batch) || {};
+    return {
+      produkId: b.produk_id,
+      nama: p.nama_barang || '(barang dihapus)',
+      kode: p.kode_barang || '',
+      tgl: String(bt.tanggal_masuk || b.tanggal || '').slice(0, 10),
+      dibuat: b.created_at || '',
+      jumlah: Number(b.jumlah || 0),
+      harga: b.harga_beli_saat_itu
+    };
+  }).sort((a, c) => (c.tgl + c.dibuat).localeCompare(a.tgl + a.dibuat));   // terbaru di atas
+
+  listBarang.innerHTML = '';
+  if (entri.length === 0) {
+    emptyBarang.style.display = 'block';
+    return;
+  }
+
+  // Ringkasan per barang: entri pertama = pembelian terbaru, jadi harga terakhir diambil dari sana
+  const peta = {};
+  const urutan = [];
+  entri.forEach(e => {
+    if (!peta[e.produkId]) {
+      peta[e.produkId] = { nama: e.nama, kode: e.kode, total: 0, hargaTerakhir: e.harga, tglTerakhir: e.tgl };
+      urutan.push(e.produkId);
+    }
+    peta[e.produkId].total += e.jumlah;
+  });
+  urutan.forEach(id => {
+    const b = peta[id];
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="nama">${escapeHtml(b.nama)}</div>
+        <div class="kode">${escapeHtml(b.kode)} &middot; terakhir ${tanggalIndo(b.tglTerakhir)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:600;">${b.hargaTerakhir != null ? formatRupiah(b.hargaTerakhir) : '-'}</div>
+        <div class="kode">total ${b.total} masuk</div>
+      </div>
+    `;
+    listBarang.appendChild(li);
+  });
+
+  entri.slice(0, 20).forEach(e => {
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="nama">${escapeHtml(e.nama)}</div>
+        <div class="kode">${tanggalIndo(e.tgl)}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:600;">${e.jumlah} &times; ${e.harga != null ? formatRupiah(e.harga) : '-'}</div>
+      </div>
+    `;
+    listRiwayat.appendChild(li);
+  });
+  if (entri.length > 20) {
+    const li = document.createElement('li');
+    li.innerHTML = '<span class="hint">Menampilkan 20 pembelian terbaru.</span>';
+    listRiwayat.appendChild(li);
+  }
+}
+
+// Pilihan supplier di form barang masuk. Kalau supplier dipilih, nama disalin ke asal_barang
+// dan kolom ketik manual disembunyikan; kalau tidak, asal barang tetap diketik bebas seperti biasa.
+async function isiPilihanSupplier(selectId, asalWrapId) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">Tanpa supplier</option>';
+  document.getElementById(asalWrapId).style.display = 'block';
+
+  const { data, error } = await sb
+    .from('gudang_supplier')
+    .select('id, nama')
+    .order('nama', { ascending: true });
+  if (error || !data) return;
+  data.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = s.nama;
+    sel.appendChild(o);
+  });
+}
+
+function ambilAsalBarang(selectId, asalInputId) {
+  const sel = document.getElementById(selectId);
+  if (sel.value) {
+    return { supplier_id: sel.value, asal_barang: sel.options[sel.selectedIndex].textContent };
+  }
+  return { supplier_id: null, asal_barang: document.getElementById(asalInputId).value.trim() || null };
+}
+
+document.getElementById('modalBaruSupplier').addEventListener('change', () => {
+  document.getElementById('modalBaruAsalWrap').style.display =
+    document.getElementById('modalBaruSupplier').value ? 'none' : 'block';
+});
+document.getElementById('detailTransSupplier').addEventListener('change', () => {
+  document.getElementById('detailTransAsalWrap').style.display =
+    document.getElementById('detailTransSupplier').value ? 'none' : 'block';
 });
 
 // ===== Laporan =====
@@ -1696,6 +2036,7 @@ function bukaModalBarangBaru(namaAwal) {
   document.getElementById('modalBaruJumlahAwal').value = 1;
   document.getElementById('modalBaruTanggalMasuk').value = todayISO();
   document.getElementById('modalBaruAsal').value = '';
+  isiPilihanSupplier('modalBaruSupplier', 'modalBaruAsalWrap');
   document.getElementById('modalBaruError').style.display = 'none';
   document.getElementById('modalBaruOverlay').style.display = 'flex';
 }
@@ -1824,7 +2165,7 @@ document.getElementById('btnModalBaruSimpan').addEventListener('click', async ()
   const hj = Number(document.getElementById('modalBaruHargaJual').value) || 0;
   const jumlahAwal = Number(document.getElementById('modalBaruJumlahAwal').value);
   const tanggalMasuk = document.getElementById('modalBaruTanggalMasuk').value;
-  const asal = document.getElementById('modalBaruAsal').value.trim() || null;
+  const pilihanAsal = ambilAsalBarang('modalBaruSupplier', 'modalBaruAsal');
   const err = document.getElementById('modalBaruError');
   err.style.display = 'none';
   if (!nama) {
@@ -1876,7 +2217,8 @@ document.getElementById('btnModalBaruSimpan').addEventListener('click', async ()
     produk_id: produkBaruData.id,
     jenis: 'masuk',
     jumlah: jumlahAwal,
-    asal_barang: asal,
+    asal_barang: pilihanAsal.asal_barang,
+    supplier_id: pilihanAsal.supplier_id,
     harga_beli_saat_itu: hb,
     batch_id: batch.id
   });
@@ -2082,6 +2424,7 @@ function bukaFormTransaksi(matchedBatch) {
   document.getElementById('detailTransJenis').value = 'masuk';
   document.getElementById('detailTransJumlah').value = 1;
   document.getElementById('detailTransAsal').value = '';
+  isiPilihanSupplier('detailTransSupplier', 'detailTransAsalWrap');
   document.getElementById('detailTransHargaBeli').value = detailProduk.harga_beli;
   document.getElementById('detailTransTanggalMasuk').value = todayISO();
   document.getElementById('detailTransError').style.display = 'none';
@@ -2160,7 +2503,9 @@ document.getElementById('btnSimpanTransaksiDetail').addEventListener('click', as
       return;
     }
     const hargaBeli = Number(document.getElementById('detailTransHargaBeli').value) || null;
-    payload.asal_barang = document.getElementById('detailTransAsal').value.trim() || null;
+    const pilihanAsal = ambilAsalBarang('detailTransSupplier', 'detailTransAsal');
+    payload.asal_barang = pilihanAsal.asal_barang;
+    payload.supplier_id = pilihanAsal.supplier_id;
     payload.harga_beli_saat_itu = hargaBeli;
 
     let batch;
