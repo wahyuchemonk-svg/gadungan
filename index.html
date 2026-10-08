@@ -355,6 +355,7 @@
   .stok-kartu .stok-angka .ket { font-size: 11px; color: var(--muted); }
   .stok-kartu .stok-angka.menipis .sisa, .stok-kartu .stok-angka.menipis .ket { color: #854F0B; }
   .stok-kartu .stok-angka.habis .sisa, .stok-kartu .stok-angka.habis .ket { color: #A32D2D; }
+  #confirmOverlay { z-index: 200; }
   .cart-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
   .cart-item:last-child { border-bottom: none; }
   .cart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
@@ -807,6 +808,10 @@
       <span>Total</span><span id="detailNotaTotal"></span>
     </p>
     <p id="detailNotaBayar"></p>
+    <p id="detailNotaStatus" style="display:none; color:var(--danger); font-weight:600;"></p>
+    <p class="error" id="detailNotaError" style="display:none;"></p>
+    <button class="danger" id="btnBatalkanNota" type="button">Batalkan nota (stok dikembalikan)</button>
+    <button class="danger" id="btnHapusNota" type="button" style="margin-top:8px;">Hapus nota</button>
     <div class="modal-actions">
       <button class="secondary" id="btnDetailNotaStruk" type="button">Lihat struk</button>
       <button class="secondary" id="btnDetailNotaTutup" type="button">Tutup</button>
@@ -1299,11 +1304,13 @@ async function muatLaporan() {
       .from('gudang_penjualan')
       .select('id, total')
       .gte('tanggal', mulai).lte('tanggal', akhir)
+      .is('dibatalkan_pada', null)
       .order('id'));
     const items = await ambilSemuaBaris(() => sb
       .from('gudang_penjualan_item')
       .select('id, kode_barang, nama_barang, jumlah, harga_satuan, harga_beli_saat_itu, gudang_penjualan!inner(tanggal)')
       .gte('gudang_penjualan.tanggal', mulai).lte('gudang_penjualan.tanggal', akhir)
+      .is('gudang_penjualan.dibatalkan_pada', null)
       .order('id'));
     if (token !== laporanToken) return;   // periode sudah diganti, abaikan hasil lama
 
@@ -1774,7 +1781,7 @@ async function muatRiwayatNota() {
 
   const { data, error } = await sb
     .from('gudang_penjualan')
-    .select('id, tanggal, total, metode_bayar, uang_diterima, kembalian, created_at, gudang_penjualan_item(count)')
+    .select('id, tanggal, total, metode_bayar, uang_diterima, kembalian, created_at, dibatalkan_pada, gudang_penjualan_item(count)')
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -1792,12 +1799,13 @@ async function muatRiwayatNota() {
       ? n.gudang_penjualan_item[0].count : 0;
     const li = document.createElement('li');
     li.className = 'clickable';
+    const batal = !!n.dibatalkan_pada;
     li.innerHTML = `
       <div>
-        <div class="nama">${waktuNota(n.created_at)}</div>
+        <div class="nama">${waktuNota(n.created_at)}${batal ? ' <span class="no-foto-badge">Dibatalkan</span>' : ''}</div>
         <div class="kode">${jml} barang &middot; ${n.metode_bayar === 'tunai' ? 'Tunai' : 'Debet'}</div>
       </div>
-      <div style="font-size:14px; font-weight:600;">${formatRupiah(n.total)}</div>
+      <div style="font-size:14px; font-weight:600;${batal ? ' text-decoration:line-through; color:var(--muted);' : ''}">${formatRupiah(n.total)}</div>
     `;
     li.addEventListener('click', () => bukaDetailNota(n));
     list.appendChild(li);
@@ -1806,6 +1814,9 @@ async function muatRiwayatNota() {
 
 async function bukaDetailNota(n) {
   notaDetailAktifId = n.id;
+  notaDetailAktif = n;
+  document.getElementById('detailNotaError').style.display = 'none';
+  tampilStatusNota(n);
   document.getElementById('detailNotaWaktu').textContent = waktuNota(n.created_at);
   document.getElementById('detailNotaTotal').textContent = formatRupiah(n.total);
   document.getElementById('detailNotaBayar').textContent = n.metode_bayar === 'tunai'
@@ -1849,6 +1860,72 @@ document.getElementById('btnDetailNotaTutup').addEventListener('click', () => {
   document.getElementById('modalDetailNotaOverlay').style.display = 'none';
 });
 
+// Tanda "dibatalkan" di jendela detail nota; tombol Batalkan hanya untuk nota yang masih aktif.
+function tampilStatusNota(n, ringkasan) {
+  const batal = !!n.dibatalkan_pada;
+  const st = document.getElementById('detailNotaStatus');
+  st.style.display = batal ? 'block' : 'none';
+  st.textContent = batal ? 'Nota ini dibatalkan. ' + (ringkasan || 'Stok barangnya sudah dikembalikan.') : '';
+  document.getElementById('btnBatalkanNota').style.display = batal ? 'none' : 'block';
+}
+
+document.getElementById('btnBatalkanNota').addEventListener('click', async () => {
+  if (!notaDetailAktif) return;
+  const err = document.getElementById('detailNotaError');
+  const btn = document.getElementById('btnBatalkanNota');
+  err.style.display = 'none';
+
+  const konfirmasi = await tampilkanKonfirmasi(
+    'Barang di nota ini dikembalikan ke stok (ke batch asalnya) dan nota tidak dihitung lagi di Laporan. Nota tetap tersimpan dengan tanda Dibatalkan.',
+    { judul: 'Batalkan nota?', labelOk: 'Batalkan nota' }
+  );
+  if (!konfirmasi) return;
+
+  btn.disabled = true;
+  const { data, error } = await sb.rpc('gudang_batalkan_penjualan', { p_id: notaDetailAktif.id });
+  btn.disabled = false;
+  if (error) {
+    err.textContent = 'Gagal membatalkan nota: ' + (error.message || 'coba lagi.');
+    err.style.display = 'block';
+    return;
+  }
+
+  const kembali = data && data.dikembalikan ? data.dikembalikan : 0;
+  const lewat = data && data.dilewati ? data.dilewati : 0;
+  let ringkasan = kembali + ' barang dikembalikan ke stok';
+  if (lewat > 0) ringkasan += ', ' + lewat + ' dilewati karena batch asalnya sudah dihapus';
+  notaDetailAktif.dibatalkan_pada = new Date().toISOString();
+  tampilStatusNota(notaDetailAktif, ringkasan + '.');
+  muatRiwayatNota();
+  loadStok();
+});
+
+document.getElementById('btnHapusNota').addEventListener('click', async () => {
+  if (!notaDetailAktif) return;
+  const err = document.getElementById('detailNotaError');
+  const btn = document.getElementById('btnHapusNota');
+  err.style.display = 'none';
+
+  const aktif = !notaDetailAktif.dibatalkan_pada;
+  const pesan = aktif
+    ? 'Nota ini akan dihapus permanen dan hilang dari Laporan. Stok TIDAK dikembalikan. Kalau barangnya perlu kembali ke stok, pakai "Batalkan nota" dulu.'
+    : 'Nota yang sudah dibatalkan ini akan dihapus permanen. Stok tidak berubah.';
+  const konfirmasi = await tampilkanKonfirmasi(pesan, { judul: 'Hapus nota?', labelOk: 'Hapus nota' });
+  if (!konfirmasi) return;
+
+  btn.disabled = true;
+  const { data, error } = await sb.from('gudang_penjualan').delete().eq('id', notaDetailAktif.id).select('id');
+  btn.disabled = false;
+  if (error || !data || data.length === 0) {
+    err.textContent = 'Gagal menghapus nota' + (error && error.message ? ': ' + error.message : '. Nota tidak ditemukan.');
+    err.style.display = 'block';
+    return;
+  }
+  document.getElementById('modalDetailNotaOverlay').style.display = 'none';
+  notaDetailAktif = null;
+  muatRiwayatNota();
+});
+
 // ===== Struk =====
 // Ganti alamat & telepon di sini kalau sudah punya data asli
 const STRUK_TOKO = {
@@ -1859,6 +1936,7 @@ const STRUK_TOKO = {
 
 let notaTerakhirId = null;
 let notaDetailAktifId = null;
+let notaDetailAktif = null;
 
 function formatAngka(n) {
   return Number(n || 0).toLocaleString('id-ID');
