@@ -332,6 +332,16 @@
   .no-foto-badge { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #fdecea; color: #c0392b; vertical-align: middle; white-space: nowrap; }
   .foto-count-badge { display: inline-block; margin-left: 6px; font-size: 10px; padding: 1px 6px; border-radius: 10px; background: #eaf3fb; color: #2471a3; vertical-align: middle; white-space: nowrap; }
   .stok-right { display: flex; align-items: center; gap: 8px; }
+  .btn-hapus-batch {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--danger);
+    background: transparent;
+    color: var(--danger);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .btn-hapus-batch:disabled { opacity: 0.5; cursor: default; }
   .chevron { color: var(--muted); font-size: 18px; line-height: 1; }
   .stok-list li.stok-kartu {
     justify-content: flex-start;
@@ -652,9 +662,23 @@
           <div><span class="info-label">Margin</span><span id="detailMargin"></span></div>
           <div><span class="info-label">Sisa stok</span><span id="detailSisaStok"></span></div>
         </div>
+        <button class="secondary" id="btnUbahBarang" type="button">Ubah data barang</button>
+        <div id="ubahBarangForm" style="display:none;">
+          <label for="ubahBarangNama">Nama barang</label>
+          <input type="text" id="ubahBarangNama">
+          <label for="ubahBarangHargaBeli">Harga beli</label>
+          <input type="number" id="ubahBarangHargaBeli" min="0">
+          <label for="ubahBarangHargaJual">Harga jual</label>
+          <input type="number" id="ubahBarangHargaJual" min="0">
+          <p class="hint">Kode barang tidak bisa diubah karena sudah dipakai di barcode. Nota lama tidak ikut berubah.</p>
+          <p class="error" id="ubahBarangError"></p>
+          <button class="primary" id="btnUbahBarangSimpan" type="button">Simpan perubahan</button>
+          <button class="secondary" id="btnUbahBarangBatal" type="button">Batal</button>
+        </div>
         <label>Batch aktif</label>
         <ul class="stok-list" id="detailBatchList"></ul>
         <p class="empty" id="detailBatchEmpty" style="display:none;">Belum ada batch aktif.</p>
+        <p class="error" id="hapusBatchError"></p>
         <button class="secondary" id="btnCatatTransaksi" type="button">+ Catat transaksi</button>
         <div id="detailTransaksiForm" style="display:none;">
           <label for="detailTransJenis">Jenis transaksi</label>
@@ -685,6 +709,18 @@
               <label for="detailTransBatchSelect">Pilih batch (default: paling lama)</label>
               <select id="detailTransBatchSelect"></select>
             </div>
+            <label for="detailTransAlasan">Alasan barang keluar</label>
+            <select id="detailTransAlasan">
+              <option value="">Pilih alasan...</option>
+              <option value="Rusak">Rusak</option>
+              <option value="Hilang">Hilang</option>
+              <option value="Dipakai sendiri">Dipakai sendiri</option>
+              <option value="Retur ke supplier">Retur ke supplier</option>
+              <option value="Koreksi stok">Koreksi stok</option>
+              <option value="__lainnya">Lainnya (ketik sendiri)</option>
+            </select>
+            <input type="text" id="detailTransAlasanLain" placeholder="Tulis alasannya" style="display:none; margin-top:8px;">
+            <p class="hint">Barang yang dijual jangan dicatat di sini. Pakai menu Penjualan supaya masuk Laporan.</p>
           </div>
           <p class="error" id="detailTransError" style="display:none;"></p>
           <p class="hint" id="detailTransSuccess" style="display:none; color:var(--success);">Transaksi tersimpan</p>
@@ -697,6 +733,11 @@
           <p class="hint" id="detailBarcodeInfo" style="margin:4px 0 10px;"></p>
           <button class="secondary" id="btnPrintDetailBarcode" type="button">Cetak label</button>
         </div>
+        <label style="margin-top:16px;">Riwayat transaksi</label>
+        <ul class="stok-list" id="detailRiwayatList"></ul>
+        <p class="empty" id="detailRiwayatEmpty" style="display:none;">Belum ada transaksi.</p>
+        <p class="hint" id="detailRiwayatKet" style="display:none;">Menampilkan 20 transaksi terbaru.</p>
+        <p class="error" id="hapusMutasiError"></p>
         <label>Foto produk (maks 4)</label>
         <div class="foto-grid" id="fotoGrid"></div>
         <input type="file" id="fotoInput" accept="image/*" style="display:none;">
@@ -2450,9 +2491,11 @@ function openDetail(p) {
   document.getElementById('detailMargin').textContent = formatRupiah(p.margin);
   document.getElementById('detailSisaStok').textContent = p.sisa_stok;
   document.getElementById('detailTransaksiForm').style.display = 'none';
+  tutupUbahBarang();
   renderFotoGrid();
   muatBatchDetail(p.id);
   muatBarcodeDetail(p.id);
+  muatRiwayatTransaksi(p.id);
   showView('view-detail');
 }
 
@@ -2484,10 +2527,116 @@ async function muatBatchDetail(produkId) {
       </div>
       <div class="stok-right">
         <div class="sisa">${b.sisa}</div>
+        <button class="btn-hapus-batch" type="button">Hapus</button>
       </div>
     `;
+    li.querySelector('.btn-hapus-batch').addEventListener('click', e => hapusBatch(b, e.currentTarget));
     list.appendChild(li);
   });
+}
+
+async function hapusBatch(b, btn) {
+  const err = document.getElementById('hapusBatchError');
+  err.style.display = 'none';
+
+  const pesan = `Batch masuk ${tanggalIndo(b.tanggal_masuk)} (sisa ${b.sisa}) akan dihapus permanen, beserta catatan transaksinya. `
+    + 'Sisa stok barang ini ikut berkurang. Riwayat pembelian batch ini juga hilang, termasuk di Detail Supplier. '
+    + 'Nota penjualan lama tetap utuh. Tindakan ini tidak bisa dibatalkan.';
+  const konfirmasi = await tampilkanKonfirmasi(pesan, { judul: 'Hapus batch?', labelOk: 'Hapus batch' });
+  if (!konfirmasi) return;
+
+  btn.disabled = true;
+  const { error } = await sb.rpc('gudang_hapus_batch', { p_batch_id: b.id });
+  btn.disabled = false;
+  if (error) {
+    err.textContent = 'Gagal menghapus batch: ' + (error.message || 'terjadi gangguan');
+    err.style.display = 'block';
+    return;
+  }
+  await refreshDetailProduk();
+}
+
+async function muatRiwayatTransaksi(produkId) {
+  const list = document.getElementById('detailRiwayatList');
+  const empty = document.getElementById('detailRiwayatEmpty');
+  const ket = document.getElementById('detailRiwayatKet');
+  const { data, error } = await sb
+    .from('gudang_mutasi_stok')
+    .select('*, gudang_batch(tanggal_masuk)')
+    .eq('produk_id', produkId)
+    .order('tanggal', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (!detailProduk || detailProduk.id !== produkId) return;
+  list.innerHTML = '';
+  ket.style.display = 'none';
+
+  if (error) {
+    empty.textContent = 'Gagal memuat riwayat transaksi.';
+    empty.style.display = 'block';
+    return;
+  }
+  if (!data || data.length === 0) {
+    empty.textContent = 'Belum ada transaksi.';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  if (data.length >= 20) ket.style.display = 'block';
+
+  data.forEach(m => {
+    const masuk = m.jenis === 'masuk';
+    const dariPenjualan = !masuk && m.asal_barang === 'Penjualan';
+    const tglBatch = m.gudang_batch && m.gudang_batch.tanggal_masuk ? tanggalIndo(m.gudang_batch.tanggal_masuk) : '';
+    const asal = m.asal_barang ? ' &middot; ' + escapeHtml(m.asal_barang) : '';
+    const li = document.createElement('li');
+    li.innerHTML = `
+      <div>
+        <div class="nama">
+          <span class="badge${masuk ? '' : ' warn'}" style="margin-left:0;">${masuk ? 'Masuk' : 'Keluar'}</span>
+          ${m.jumlah}${asal}
+        </div>
+        <div class="usia-batch">${tanggalIndo(m.tanggal)}${tglBatch ? ' &middot; batch ' + tglBatch : ''}</div>
+      </div>
+      <div class="stok-right">
+        ${dariPenjualan ? '' : '<button class="btn-hapus-batch" type="button">Hapus</button>'}
+      </div>
+    `;
+    const btn = li.querySelector('.btn-hapus-batch');
+    if (btn) btn.addEventListener('click', e => hapusMutasi(m, tglBatch, e.currentTarget));
+    list.appendChild(li);
+  });
+}
+
+async function hapusMutasi(m, tglBatch, btn) {
+  const err = document.getElementById('hapusMutasiError');
+  err.style.display = 'none';
+
+  let pesan, judul, labelOk;
+  if (m.jenis === 'masuk') {
+    judul = 'Hapus transaksi masuk?';
+    labelOk = 'Hapus transaksi';
+    pesan = `Transaksi masuk ${m.jumlah} (${tanggalIndo(m.tanggal)}) akan dihapus permanen. Stok batch${tglBatch ? ' ' + tglBatch : ''} berkurang ${m.jumlah}, dan batch ikut terhapus kalau jadi kosong. `
+      + (m.supplier_id ? 'Riwayat pembelian ini juga hilang dari Detail Supplier. ' : '')
+      + 'Hanya bisa kalau stoknya belum terpakai. Tindakan ini tidak bisa dibatalkan.';
+  } else {
+    judul = 'Hapus transaksi keluar?';
+    labelOk = 'Hapus transaksi';
+    pesan = `Transaksi keluar ${m.jumlah} (${tanggalIndo(m.tanggal)}) akan dihapus permanen, dan ${m.jumlah} barang dikembalikan ke stok batch${tglBatch ? ' ' + tglBatch : ''}. Tindakan ini tidak bisa dibatalkan.`;
+  }
+  const konfirmasi = await tampilkanKonfirmasi(pesan, { judul, labelOk });
+  if (!konfirmasi) return;
+
+  btn.disabled = true;
+  const { error } = await sb.rpc('gudang_hapus_mutasi', { p_id: m.id });
+  btn.disabled = false;
+  if (error) {
+    err.textContent = 'Gagal menghapus transaksi: ' + (error.message || 'terjadi gangguan');
+    err.style.display = 'block';
+    return;
+  }
+  await refreshDetailProduk();
 }
 
 async function muatBarcodeDetail(produkId) {
@@ -2537,6 +2686,9 @@ function bukaFormTransaksi(matchedBatch) {
   document.getElementById('detailTransJenis').value = 'masuk';
   document.getElementById('detailTransJumlah').value = 1;
   document.getElementById('detailTransAsal').value = '';
+  document.getElementById('detailTransAlasan').value = '';
+  document.getElementById('detailTransAlasanLain').value = '';
+  document.getElementById('detailTransAlasanLain').style.display = 'none';
   isiPilihanSupplier('detailTransSupplier', 'detailTransAsalWrap');
   document.getElementById('detailTransHargaBeli').value = detailProduk.harga_beli;
   document.getElementById('detailTransTanggalMasuk').value = todayISO();
@@ -2552,6 +2704,12 @@ document.getElementById('btnBatalTransaksiDetail').addEventListener('click', () 
 });
 
 document.getElementById('detailTransJenis').addEventListener('change', toggleDetailTransFields);
+document.getElementById('detailTransAlasan').addEventListener('change', () => {
+  const lain = document.getElementById('detailTransAlasan').value === '__lainnya';
+  const input = document.getElementById('detailTransAlasanLain');
+  input.style.display = lain ? 'block' : 'none';
+  if (lain) input.focus();
+});
 async function toggleDetailTransFields() {
   const isMasuk = document.getElementById('detailTransJenis').value === 'masuk';
   document.getElementById('detailTransMasukWrap').style.display = isMasuk ? 'block' : 'none';
@@ -2639,6 +2797,22 @@ document.getElementById('btnSimpanTransaksiDetail').addEventListener('click', as
       return;
     }
     payload.batch_id = batchId;
+
+    const pilihAlasan = document.getElementById('detailTransAlasan').value;
+    const alasan = pilihAlasan === '__lainnya'
+      ? document.getElementById('detailTransAlasanLain').value.trim()
+      : pilihAlasan;
+    if (!alasan) {
+      err.textContent = pilihAlasan === '__lainnya' ? 'Tulis alasan barang keluar' : 'Pilih alasan barang keluar';
+      err.style.display = 'block';
+      return;
+    }
+    if (alasan.toLowerCase() === 'penjualan') {
+      err.textContent = 'Untuk barang yang dijual, gunakan menu Penjualan';
+      err.style.display = 'block';
+      return;
+    }
+    payload.asal_barang = alasan;
   }
 
   const { error } = await sb.from('gudang_mutasi_stok').insert(payload);
@@ -2665,6 +2839,68 @@ document.getElementById('btnSimpanTransaksiDetail').addEventListener('click', as
   await refreshDetailProduk();
 });
 
+function tutupUbahBarang() {
+  document.getElementById('ubahBarangForm').style.display = 'none';
+  document.getElementById('btnUbahBarang').style.display = 'block';
+}
+
+document.getElementById('btnUbahBarang').addEventListener('click', () => {
+  document.getElementById('ubahBarangNama').value = detailProduk.nama_barang;
+  document.getElementById('ubahBarangHargaBeli').value = detailProduk.harga_beli;
+  document.getElementById('ubahBarangHargaJual').value = detailProduk.harga_jual;
+  document.getElementById('ubahBarangError').style.display = 'none';
+  document.getElementById('ubahBarangForm').style.display = 'block';
+  document.getElementById('btnUbahBarang').style.display = 'none';
+});
+
+document.getElementById('btnUbahBarangBatal').addEventListener('click', tutupUbahBarang);
+
+document.getElementById('btnUbahBarangSimpan').addEventListener('click', async () => {
+  const err = document.getElementById('ubahBarangError');
+  const btn = document.getElementById('btnUbahBarangSimpan');
+  err.style.display = 'none';
+
+  const nama = document.getElementById('ubahBarangNama').value.trim();
+  const hbTeks = document.getElementById('ubahBarangHargaBeli').value.trim();
+  const hjTeks = document.getElementById('ubahBarangHargaJual').value.trim();
+  const hb = Number(hbTeks);
+  const hj = Number(hjTeks);
+  let pesan = '';
+  if (!nama) pesan = 'Isi nama barang dulu';
+  else if (hbTeks === '' || isNaN(hb) || hb < 0) pesan = 'Isi harga beli yang benar (0 atau lebih)';
+  else if (hjTeks === '' || isNaN(hj) || hj < 0) pesan = 'Isi harga jual yang benar (0 atau lebih)';
+  if (pesan) {
+    err.textContent = pesan;
+    err.style.display = 'block';
+    return;
+  }
+
+  const produkId = detailProduk.id;
+  btn.disabled = true;
+  const { data, error } = await sb
+    .from('gudang_produk')
+    .update({ nama_barang: nama, harga_beli: hb, harga_jual: hj })
+    .eq('id', produkId)
+    .select('*')
+    .maybeSingle();
+  btn.disabled = false;
+
+  if (error || !data) {
+    err.textContent = 'Gagal menyimpan perubahan' + (error && error.message ? ': ' + error.message : '. Barang tidak ditemukan.');
+    err.style.display = 'block';
+    return;
+  }
+  if (!detailProduk || detailProduk.id !== produkId) { loadStok(); return; }
+
+  detailProduk = data;
+  document.getElementById('detailNama').textContent = data.nama_barang;
+  document.getElementById('detailHargaBeli').textContent = formatRupiah(data.harga_beli);
+  document.getElementById('detailHargaJual').textContent = formatRupiah(data.harga_jual);
+  document.getElementById('detailMargin').textContent = formatRupiah(data.margin);
+  tutupUbahBarang();
+  loadStok();
+});
+
 async function refreshDetailProduk() {
   const { data } = await sb.from('gudang_produk').select('*').eq('id', detailProduk.id).single();
   if (data) {
@@ -2675,6 +2911,7 @@ async function refreshDetailProduk() {
   }
   muatBatchDetail(detailProduk.id);
   muatBarcodeDetail(detailProduk.id);
+  muatRiwayatTransaksi(detailProduk.id);
   loadStok();
 }
 
