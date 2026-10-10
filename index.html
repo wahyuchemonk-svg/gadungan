@@ -532,7 +532,13 @@
           <option value="stok_desc">Sisa stok: banyak dulu</option>
           <option value="terbaru">Terbaru ditambah</option>
         </select>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+          <button class="secondary" id="stokKategoriBtn" type="button" style="width:auto; margin-top:0; padding:8px 14px;">Kategori &#9662;</button>
+          <button class="secondary" id="stokKategoriAktif" type="button" style="display:none; width:auto; margin-top:0; padding:8px 12px; font-size:13px;"></button>
+        </div>
+        <p class="hint" id="stokKategoriInfo" style="display:none; margin:0 0 8px;"></p>
         <ul class="stok-list" id="stokList"></ul>
+        <button class="secondary" id="btnStokLagi" type="button" style="display:none;">Tampilkan lebih banyak</button>
         <p class="empty" id="stokEmpty" style="display:none;">Belum ada barang. Buka tombol ^ di pojok kanan bawah, lalu pilih "Daftarkan barang baru".</p>
         <button class="secondary" id="btnDaftarBaruDariStok" type="button" style="display:none;">+ Daftarkan sebagai barang baru</button>
       </div>
@@ -589,6 +595,14 @@
         <h2>Supplier</h2>
         <ul class="stok-list" id="supplierList" style="margin-top:10px;"></ul>
         <p class="empty" id="supplierEmpty" style="display:none;">Belum ada supplier. Buka tombol ^ di pojok kanan bawah, lalu pilih "Tambah supplier".</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-kategori">
+      <div class="card">
+        <h2>Kategori</h2>
+        <ul class="stok-list" id="kategoriList" style="margin-top:10px;"></ul>
+        <p class="empty" id="kategoriEmpty" style="display:none;">Belum ada kategori. Buka tombol ^ di pojok kanan bawah, lalu pilih "Tambah kategori".</p>
       </div>
     </section>
 
@@ -656,6 +670,7 @@
       <div class="card">
         <h2 id="detailNama"></h2>
         <p class="kode" id="detailKode" style="font-family:monospace; color:var(--muted); font-size:12px; margin:0 0 8px;"></p>
+        <p id="detailKategori" style="color:var(--muted); font-size:13px; margin:0 0 8px;"></p>
         <div class="info-grid">
           <div><span class="info-label">Harga beli</span><span id="detailHargaBeli"></span></div>
           <div><span class="info-label">Harga jual</span><span id="detailHargaJual"></span></div>
@@ -670,6 +685,8 @@
           <input type="number" id="ubahBarangHargaBeli" min="0">
           <label for="ubahBarangHargaJual">Harga jual</label>
           <input type="number" id="ubahBarangHargaJual" min="0">
+          <label for="ubahBarangKategoriBtn">Kategori</label>
+          <button class="secondary" id="ubahBarangKategoriBtn" type="button" style="text-align:left; margin-top:0;">Tanpa kategori</button>
           <p class="hint">Kode barang tidak bisa diubah karena sudah dipakai di barcode. Nota lama tidak ikut berubah.</p>
           <p class="error" id="ubahBarangError"></p>
           <button class="primary" id="btnUbahBarangSimpan" type="button">Simpan perubahan</button>
@@ -754,9 +771,11 @@
     <div class="fab-menu" id="fabMenu">
       <button class="secondary" id="fabDaftarBaru" type="button" data-view="view-stok">+ Daftarkan barang baru</button>
       <button class="secondary" id="fabAktifkanKamera" type="button" data-view="view-stok">&#128247; Aktifkan kamera</button>
+      <button class="secondary" id="fabKelolaKategori" type="button" data-view="view-stok">Kelola kategori</button>
       <button class="secondary" id="fabScanJual" type="button" data-view="view-penjualan">&#128247; Scan barcode</button>
       <button class="secondary" id="fabRiwayatNota" type="button" data-view="view-penjualan">&#128203; Riwayat nota</button>
       <button class="secondary" id="fabTambahSupplier" type="button" data-view="view-supplier">+ Tambah supplier</button>
+      <button class="secondary" id="fabTambahKategori" type="button" data-view="view-kategori">+ Tambah kategori</button>
     </div>
     <button class="fab-toggle fab-sembunyi" id="fabToggle" type="button" aria-label="Menu aksi">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"></polyline></svg>
@@ -782,6 +801,32 @@
     <div class="modal-actions">
       <button class="secondary" id="btnSupplierBatal" type="button">Batal</button>
       <button class="primary" id="btnSupplierSimpan" type="button">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalKategoriOverlay">
+  <div class="modal-card form-modal">
+    <h3 id="modalKategoriJudul">Tambah kategori</h3>
+    <label for="kategoriNama">Nama kategori</label>
+    <input type="text" id="kategoriNama" placeholder="Contoh: Baterai">
+    <p class="error" id="kategoriError" style="display:none;"></p>
+    <button class="danger" id="btnKategoriHapus" type="button" style="display:none;">Hapus kategori ini</button>
+    <div class="modal-actions">
+      <button class="secondary" id="btnKategoriBatal" type="button">Batal</button>
+      <button class="primary" id="btnKategoriSimpan" type="button">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalPilihKategoriOverlay" style="z-index:150;">
+  <div class="modal-card form-modal">
+    <h3>Pilih kategori</h3>
+    <input type="text" id="pilihKategoriCari" placeholder="Cari atau ketik kategori baru" autocomplete="off">
+    <ul class="stok-list" id="pilihKategoriList" style="margin-top:8px; max-height:50vh; overflow-y:auto;"></ul>
+    <p class="error" id="pilihKategoriError" style="display:none;"></p>
+    <div class="modal-actions">
+      <button class="secondary" id="btnPilihKategoriBatal" type="button">Batal</button>
     </div>
   </div>
 </div>
@@ -815,6 +860,8 @@
     <input type="number" id="modalBaruJumlahAwal" min="1" value="1">
     <label for="modalBaruTanggalMasuk">Tanggal masuk</label>
     <input type="date" id="modalBaruTanggalMasuk">
+    <label for="modalBaruKategoriBtn">Kategori (opsional)</label>
+    <button class="secondary" id="modalBaruKategoriBtn" type="button" style="text-align:left; margin-top:0;">Tanpa kategori</button>
     <label for="modalBaruSupplier">Supplier (opsional)</label>
     <select id="modalBaruSupplier"></select>
     <div id="modalBaruAsalWrap">
@@ -915,6 +962,7 @@ const INDUK_LAYAR = {
   'view-laporan': 'view-home',
   'view-supplier': 'view-home',
   'view-supplier-detail': 'view-supplier',
+  'view-kategori': 'view-stok',
   'view-pengaturan': 'view-home',
   'view-detail': 'view-stok',
   'view-riwayat': 'view-penjualan'
@@ -991,6 +1039,270 @@ document.getElementById('homeLaporan').addEventListener('click', () => {
 
 document.getElementById('homePengaturan').addEventListener('click', () => {
   showView('view-pengaturan');
+});
+
+// ===== Kategori =====
+let kategoriEditId = null;
+// null = sedang menambah kategori baru
+let kategoriEditNama = '';
+let kategoriEditJumlah = 0;
+
+document.getElementById('fabKelolaKategori').addEventListener('click', () => {
+  tutupMenuFab();
+  showView('view-kategori');
+  muatKategori();
+});
+
+document.getElementById('fabTambahKategori').addEventListener('click', () => {
+  tutupMenuFab();
+  bukaModalKategori(null, 0);
+});
+
+async function muatKategori() {
+  const list = document.getElementById('kategoriList');
+  const empty = document.getElementById('kategoriEmpty');
+  list.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  empty.style.display = 'none';
+
+  try {
+    const [hasilKat, produk] = await Promise.all([
+      sb.from('gudang_kategori').select('id, nama'),
+      ambilSemuaBaris(() => sb.from('gudang_produk').select('kategori_id').not('kategori_id', 'is', null).order('id'))
+    ]);
+    if (hasilKat.error) throw hasilKat.error;
+
+    const jumlah = {};
+    produk.forEach(p => { jumlah[p.kategori_id] = (jumlah[p.kategori_id] || 0) + 1; });
+    const data = (hasilKat.data || []).slice().sort((a, b) => a.nama.localeCompare(b.nama, 'id', { sensitivity: 'base' }));
+
+    list.innerHTML = '';
+    if (data.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    data.forEach(k => {
+      const n = jumlah[k.id] || 0;
+      const li = document.createElement('li');
+      li.className = 'clickable';
+      li.innerHTML = `
+        <div>
+          <div class="nama">${escapeHtml(k.nama)}</div>
+          <div class="kode">${n} barang</div>
+        </div>
+      `;
+      li.addEventListener('click', () => bukaModalKategori(k, n));
+      list.appendChild(li);
+    });
+  } catch (e) {
+    list.innerHTML = '<li><span class="hint">Gagal memuat kategori.</span></li>';
+  }
+}
+
+function bukaModalKategori(k, jumlah) {
+  kategoriEditId = k ? k.id : null;
+  kategoriEditNama = k ? k.nama : '';
+  kategoriEditJumlah = jumlah || 0;
+  document.getElementById('modalKategoriJudul').textContent = k ? 'Ubah kategori' : 'Tambah kategori';
+  document.getElementById('kategoriNama').value = k ? k.nama : '';
+  document.getElementById('kategoriError').style.display = 'none';
+  document.getElementById('btnKategoriHapus').style.display = k ? 'block' : 'none';
+  document.getElementById('modalKategoriOverlay').style.display = 'flex';
+}
+
+document.getElementById('btnKategoriBatal').addEventListener('click', () => {
+  document.getElementById('modalKategoriOverlay').style.display = 'none';
+});
+
+document.getElementById('btnKategoriSimpan').addEventListener('click', async () => {
+  const err = document.getElementById('kategoriError');
+  const btn = document.getElementById('btnKategoriSimpan');
+  err.style.display = 'none';
+
+  const nama = document.getElementById('kategoriNama').value.trim();
+  if (!nama) {
+    err.textContent = 'Nama kategori wajib diisi.';
+    err.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;   // cegah terkirim dobel
+  const { error } = kategoriEditId
+    ? await sb.from('gudang_kategori').update({ nama }).eq('id', kategoriEditId)
+    : await sb.from('gudang_kategori').insert({ nama });
+  btn.disabled = false;
+
+  if (error) {
+    err.textContent = error.code === '23505'
+      ? 'Kategori dengan nama itu sudah ada.'
+      : 'Gagal menyimpan. Cek koneksi lalu coba lagi.';
+    err.style.display = 'block';
+    return;
+  }
+  document.getElementById('modalKategoriOverlay').style.display = 'none';
+  muatKategori();
+});
+
+document.getElementById('btnKategoriHapus').addEventListener('click', async () => {
+  const err = document.getElementById('kategoriError');
+  err.style.display = 'none';
+  const dampak = kategoriEditJumlah > 0
+    ? `${kategoriEditJumlah} barang akan menjadi "Tanpa kategori". Barangnya sendiri tidak ikut terhapus.`
+    : 'Tidak ada barang di kategori ini.';
+  const konfirmasi = await tampilkanKonfirmasi(
+    `Hapus kategori "${kategoriEditNama}"? ${dampak}`,
+    { judul: 'Hapus kategori?', labelOk: 'Hapus kategori' }
+  );
+  if (!konfirmasi) return;
+
+  const { error } = await sb.from('gudang_kategori').delete().eq('id', kategoriEditId);
+  if (error) {
+    err.textContent = 'Gagal menghapus. Cek koneksi lalu coba lagi.';
+    err.style.display = 'block';
+    return;
+  }
+  document.getElementById('modalKategoriOverlay').style.display = 'none';
+  muatKategori();
+});
+
+// ===== Pemilih kategori (dipakai form barang baru & Ubah data barang) =====
+let kategoriCache = [];
+let modalBaruKategori = null;    // {id, nama} atau null = tanpa kategori
+let ubahBarangKategori = null;
+let pilihKategoriCallback = null;
+let pilihKategoriTerpilihId = null;
+let pilihKategoriMembuat = false;
+let pilihKategoriMode = 'form';   // 'form' (pilih untuk barang) atau 'filter' (saring daftar Stok)
+let pilihKategoriHitung = null;
+
+async function muatDaftarKategori() {
+  const { data, error } = await sb.from('gudang_kategori').select('id, nama');
+  if (error) throw error;
+  kategoriCache = (data || []).slice().sort((a, b) => a.nama.localeCompare(b.nama, 'id', { sensitivity: 'base' }));
+  return kategoriCache;
+}
+
+function tampilKategoriBtn(btnId, kat) {
+  document.getElementById(btnId).textContent = kat ? kat.nama : 'Tanpa kategori';
+}
+
+async function isiKategoriDetail(id) {
+  const el = document.getElementById('detailKategori');
+  if (!id) { el.textContent = 'Tanpa kategori'; return; }
+  el.textContent = 'Kategori: ...';
+  try {
+    const daftar = await muatDaftarKategori();
+    if (!detailProduk || detailProduk.kategori_id !== id) return;
+    const k = daftar.find(x => x.id === id);
+    el.textContent = 'Kategori: ' + (k ? k.nama : '-');
+  } catch (e) {
+    el.textContent = 'Kategori: -';
+  }
+}
+
+async function bukaPemilihKategori(terpilihId, onPilih, opsi) {
+  pilihKategoriCallback = onPilih;
+  pilihKategoriTerpilihId = terpilihId || null;
+  pilihKategoriMembuat = false;
+  pilihKategoriMode = opsi && opsi.filter ? 'filter' : 'form';
+  pilihKategoriHitung = opsi && opsi.hitung ? opsi.hitung : null;
+  document.getElementById('pilihKategoriCari').placeholder = pilihKategoriMode === 'filter' ? 'Cari kategori' : 'Cari atau ketik kategori baru';
+  document.getElementById('pilihKategoriCari').value = '';
+  document.getElementById('pilihKategoriError').style.display = 'none';
+  const list = document.getElementById('pilihKategoriList');
+  list.innerHTML = '<li><span class="hint">Memuat...</span></li>';
+  document.getElementById('modalPilihKategoriOverlay').style.display = 'flex';
+  try {
+    await muatDaftarKategori();
+  } catch (e) {
+    list.innerHTML = '<li><span class="hint">Gagal memuat kategori.</span></li>';
+    return;
+  }
+  renderPilihKategori();
+  document.getElementById('pilihKategoriCari').focus();
+}
+
+function tutupPemilihKategori() {
+  document.getElementById('modalPilihKategoriOverlay').style.display = 'none';
+  pilihKategoriCallback = null;
+}
+
+function pilihKategori(k) {
+  const cb = pilihKategoriCallback;
+  tutupPemilihKategori();
+  if (cb) cb(k ? { id: k.id, nama: k.nama } : null);
+}
+
+function renderPilihKategori() {
+  const teks = document.getElementById('pilihKategoriCari').value.trim();
+  const q = teks.toLowerCase();
+  const list = document.getElementById('pilihKategoriList');
+  list.innerHTML = '';
+
+  const tambah = (label, aksi, tebal, jumlah) => {
+    const li = document.createElement('li');
+    li.className = 'clickable';
+    li.innerHTML = `<div class="nama"${tebal ? ' style="color:var(--accent); font-weight:600;"' : ''}>${label}</div>`
+      + (jumlah !== undefined ? `<div class="kode">${jumlah}</div>` : '');
+    li.addEventListener('click', aksi);
+    list.appendChild(li);
+  };
+  const centang = id => (id === pilihKategoriTerpilihId ? '&#10003; ' : '');
+
+  if (pilihKategoriMode === 'filter') {
+    const h = pilihKategoriHitung || { semua: 0, tanpa: 0, per: {} };
+    if (!q) {
+      tambah(centang('semua') + 'Semua kategori', () => pilihFilter('semua'), false, h.semua);
+      tambah(centang('tanpa') + 'Tanpa kategori', () => pilihFilter('tanpa'), false, h.tanpa);
+    }
+    kategoriCache
+      .filter(k => k.nama.toLowerCase().includes(q))
+      .forEach(k => tambah(centang(k.id) + escapeHtml(k.nama), () => pilihFilter(k.id), false, h.per[k.id] || 0));
+    return;
+  }
+
+  if (!q) tambah(centang(null) + 'Tanpa kategori', () => pilihKategori(null));
+  kategoriCache
+    .filter(k => k.nama.toLowerCase().includes(q))
+    .forEach(k => tambah(centang(k.id) + escapeHtml(k.nama), () => pilihKategori(k)));
+  const persis = kategoriCache.some(k => k.nama.trim().toLowerCase() === q);
+  if (teks && !persis) {
+    tambah('+ Buat kategori baru &ldquo;' + escapeHtml(teks) + '&rdquo;', () => buatKategoriDariPemilih(teks), true);
+  }
+}
+
+async function buatKategoriDariPemilih(nama) {
+  if (pilihKategoriMembuat) return;
+  pilihKategoriMembuat = true;
+  const err = document.getElementById('pilihKategoriError');
+  err.style.display = 'none';
+  const { data, error } = await sb.from('gudang_kategori').insert({ nama }).select('id, nama').single();
+  pilihKategoriMembuat = false;
+  if (error || !data) {
+    err.textContent = error && error.code === '23505'
+      ? 'Kategori dengan nama itu sudah ada.'
+      : 'Gagal membuat kategori. Cek koneksi lalu coba lagi.';
+    err.style.display = 'block';
+    return;
+  }
+  kategoriCache.push(data);
+  pilihKategori(data);
+}
+
+document.getElementById('pilihKategoriCari').addEventListener('input', renderPilihKategori);
+document.getElementById('btnPilihKategoriBatal').addEventListener('click', tutupPemilihKategori);
+
+document.getElementById('modalBaruKategoriBtn').addEventListener('click', () => {
+  bukaPemilihKategori(modalBaruKategori ? modalBaruKategori.id : null, k => {
+    modalBaruKategori = k;
+    tampilKategoriBtn('modalBaruKategoriBtn', k);
+  });
+});
+
+document.getElementById('ubahBarangKategoriBtn').addEventListener('click', () => {
+  bukaPemilihKategori(ubahBarangKategori ? ubahBarangKategori.id : null, k => {
+    ubahBarangKategori = k;
+    tampilKategoriBtn('ubahBarangKategoriBtn', k);
+  });
 });
 
 // ===== Supplier =====
@@ -2099,14 +2411,23 @@ document.getElementById('btnLogout').addEventListener('click', async () => {
 });
 
 let stokData = [];
+let stokFilterKategori = 'semua';   // 'semua' | 'tanpa' | id kategori
+const STOK_UKURAN_HALAMAN = 50;     // jumlah kartu yang ditampilkan per tahap
+let stokTampilBatas = STOK_UKURAN_HALAMAN;
 
 async function loadStok() {
-  const { data, error } = await sb
-    .from('gudang_produk')
-    .select('*')
-    .order('nama_barang', { ascending: true });
+  const [hasil, kat] = await Promise.all([
+    ambilSemuaBaris(() => sb.from('gudang_produk').select('*').order('nama_barang', { ascending: true }).order('id', { ascending: true }))
+      .then(data => ({ data, error: null }), error => ({ data: null, error })),
+    muatDaftarKategori().catch(() => null)
+  ]);
+  const { data, error } = hasil;
   if (error) return;
   stokData = data || [];
+  // kategori yang sedang dipakai sebagai filter sudah dihapus -> kembali ke semua
+  if (kat && stokFilterKategori !== 'semua' && stokFilterKategori !== 'tanpa' && !kat.some(k => k.id === stokFilterKategori)) {
+    stokFilterKategori = 'semua';
+  }
   renderStok();
 }
 
@@ -2132,26 +2453,47 @@ function renderStok() {
   const empty = document.getElementById('stokEmpty');
   const term = document.getElementById('stokSearch').value.trim().toLowerCase();
 
+  let dasar = stokData;
+  if (stokFilterKategori === 'tanpa') dasar = stokData.filter(p => !p.kategori_id);
+  else if (stokFilterKategori !== 'semua') dasar = stokData.filter(p => p.kategori_id === stokFilterKategori);
   const filteredRaw = term
-    ? stokData.filter(p =>
+    ? dasar.filter(p =>
         p.nama_barang.toLowerCase().includes(term) ||
         p.kode_barang.toLowerCase().includes(term))
-    : stokData;
+    : dasar;
   const filtered = sortStokData(filteredRaw);
+
+  const namaKat = {};
+  kategoriCache.forEach(k => { namaKat[k.id] = k.nama; });
+  const chip = document.getElementById('stokKategoriAktif');
+  const info = document.getElementById('stokKategoriInfo');
+  if (stokFilterKategori === 'semua') {
+    chip.style.display = 'none';
+    info.style.display = 'none';
+  } else {
+    const nm = stokFilterKategori === 'tanpa' ? 'Tanpa kategori' : (namaKat[stokFilterKategori] || 'Kategori');
+    chip.textContent = nm + ' \u2715';
+    chip.style.display = 'inline-block';
+    info.textContent = filtered.length + (stokFilterKategori === 'tanpa' ? ' barang tanpa kategori' : ' barang di kategori ini');
+    info.style.display = 'block';
+  }
 
   const btnDaftarBaru = document.getElementById('btnDaftarBaruDariStok');
   list.innerHTML = '';
   if (filtered.length === 0) {
     empty.textContent = term
       ? 'Tidak ada barang yang cocok.'
+      : stokFilterKategori !== 'semua'
+      ? 'Tidak ada barang di kategori ini.'
       : 'Belum ada barang. Buka tombol ^ di pojok kanan bawah, lalu pilih "Daftarkan barang baru".';
     empty.style.display = 'block';
     btnDaftarBaru.style.display = term ? 'block' : 'none';
+    document.getElementById('btnStokLagi').style.display = 'none';
     return;
   }
   empty.style.display = 'none';
   btnDaftarBaru.style.display = 'none';
-  filtered.forEach(p => {
+  filtered.slice(0, stokTampilBatas).forEach(p => {
     const li = document.createElement('li');
     li.className = 'clickable stok-kartu';
     const sisa = Number(p.sisa_stok);
@@ -2166,7 +2508,7 @@ function renderStok() {
       <div class="foto">${fotoHtml}</div>
       <div class="info">
         <div class="nama">${escapeHtml(p.nama_barang)}</div>
-        <div class="kode">${escapeHtml(p.kode_barang)}</div>
+        <div class="kode">${escapeHtml(p.kode_barang)}${p.kategori_id && namaKat[p.kategori_id] ? ' &middot; ' + escapeHtml(namaKat[p.kategori_id]) : ''}</div>
         <div class="harga">${formatRupiah(Number(p.harga_jual || 0))}</div>
       </div>
       <div class="stok-angka ${status}">
@@ -2177,10 +2519,55 @@ function renderStok() {
     li.addEventListener('click', () => openDetail(p));
     list.appendChild(li);
   });
+
+  const btnLagi = document.getElementById('btnStokLagi');
+  if (filtered.length > stokTampilBatas) {
+    btnLagi.textContent = 'Tampilkan lebih banyak (' + stokTampilBatas + ' dari ' + filtered.length + ')';
+    btnLagi.style.display = 'block';
+  } else {
+    btnLagi.style.display = 'none';
+  }
 }
 
-document.getElementById('stokSearch').addEventListener('input', renderStok);
-document.getElementById('stokSort').addEventListener('change', renderStok);
+function renderStokDariAwal() {
+  stokTampilBatas = STOK_UKURAN_HALAMAN;
+  renderStok();
+}
+
+document.getElementById('stokSearch').addEventListener('input', renderStokDariAwal);
+document.getElementById('stokSort').addEventListener('change', renderStokDariAwal);
+document.getElementById('btnStokLagi').addEventListener('click', () => {
+  stokTampilBatas += STOK_UKURAN_HALAMAN;
+  renderStok();
+});
+
+function hitungKategoriStok() {
+  const per = {};
+  let tanpa = 0;
+  stokData.forEach(p => {
+    if (p.kategori_id) per[p.kategori_id] = (per[p.kategori_id] || 0) + 1;
+    else tanpa++;
+  });
+  return { semua: stokData.length, tanpa, per };
+}
+
+function pilihFilter(nilai) {
+  const cb = pilihKategoriCallback;
+  tutupPemilihKategori();
+  if (cb) cb(nilai);
+}
+
+document.getElementById('stokKategoriBtn').addEventListener('click', () => {
+  bukaPemilihKategori(stokFilterKategori, nilai => {
+    stokFilterKategori = nilai;
+    renderStokDariAwal();
+  }, { filter: true, hitung: hitungKategoriStok() });
+});
+
+document.getElementById('stokKategoriAktif').addEventListener('click', () => {
+  stokFilterKategori = 'semua';
+  renderStokDariAwal();
+});
 
 function bukaModalBarangBaru(namaAwal) {
   document.getElementById('modalBaruNama').value = namaAwal || '';
@@ -2190,6 +2577,8 @@ function bukaModalBarangBaru(namaAwal) {
   document.getElementById('modalBaruJumlahAwal').value = 1;
   document.getElementById('modalBaruTanggalMasuk').value = todayISO();
   document.getElementById('modalBaruAsal').value = '';
+  modalBaruKategori = null;
+  tampilKategoriBtn('modalBaruKategoriBtn', null);
   isiPilihanSupplier('modalBaruSupplier', 'modalBaruAsalWrap');
   document.getElementById('modalBaruError').style.display = 'none';
   document.getElementById('modalBaruOverlay').style.display = 'flex';
@@ -2349,6 +2738,7 @@ document.getElementById('btnModalBaruSimpan').addEventListener('click', async ()
     nama_barang: nama,
     harga_beli: hb,
     harga_jual: hj,
+    kategori_id: modalBaruKategori ? modalBaruKategori.id : null,
     sisa_stok: 0
   }).select().single();
   if (error) {
@@ -2844,7 +3234,20 @@ function tutupUbahBarang() {
   document.getElementById('btnUbahBarang').style.display = 'block';
 }
 
-document.getElementById('btnUbahBarang').addEventListener('click', () => {
+document.getElementById('btnUbahBarang').addEventListener('click', async () => {
+  const kid = detailProduk.kategori_id;
+  let kat = null;
+  if (kid) {
+    try {
+      const daftar = await muatDaftarKategori();
+      const k = daftar.find(x => x.id === kid);
+      kat = { id: kid, nama: k ? k.nama : 'Kategori' };
+    } catch (e) {
+      kat = { id: kid, nama: 'Kategori' };   // kategori lama tetap terjaga walau gagal memuat nama
+    }
+  }
+  ubahBarangKategori = kat;
+  tampilKategoriBtn('ubahBarangKategoriBtn', kat);
   document.getElementById('ubahBarangNama').value = detailProduk.nama_barang;
   document.getElementById('ubahBarangHargaBeli').value = detailProduk.harga_beli;
   document.getElementById('ubahBarangHargaJual').value = detailProduk.harga_jual;
@@ -2879,7 +3282,7 @@ document.getElementById('btnUbahBarangSimpan').addEventListener('click', async (
   btn.disabled = true;
   const { data, error } = await sb
     .from('gudang_produk')
-    .update({ nama_barang: nama, harga_beli: hb, harga_jual: hj })
+    .update({ nama_barang: nama, harga_beli: hb, harga_jual: hj, kategori_id: ubahBarangKategori ? ubahBarangKategori.id : null })
     .eq('id', produkId)
     .select('*')
     .maybeSingle();
@@ -2897,6 +3300,7 @@ document.getElementById('btnUbahBarangSimpan').addEventListener('click', async (
   document.getElementById('detailHargaBeli').textContent = formatRupiah(data.harga_beli);
   document.getElementById('detailHargaJual').textContent = formatRupiah(data.harga_jual);
   document.getElementById('detailMargin').textContent = formatRupiah(data.margin);
+  isiKategoriDetail(data.kategori_id);
   tutupUbahBarang();
   loadStok();
 });
